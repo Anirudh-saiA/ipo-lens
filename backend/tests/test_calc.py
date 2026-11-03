@@ -139,3 +139,30 @@ def test_money_results_keep_the_input_unit() -> None:
     )
     (result,) = calc.compute_period(figures, "FY2026")
     assert (result.metric, result.value, result.unit) == ("ebitda", D("15"), "INR lakh")
+
+
+def test_debt_including_deferred_payments() -> None:
+    # Jio Platforms RHP page 75, 31 March 2026: borrowings 514,548 + 193,262;
+    # deferred payment liabilities 995,517 + 49,620
+    assert calc.debt_including_deferred_payments(D("707810"), D("995517"), D("49620")) == D(
+        "1752947"
+    )
+
+
+def test_second_debt_view_needs_both_deferred_payment_lines() -> None:
+    base = [
+        _fig(1, "borrowings_non_current", "as at 2026-03-31", "514548"),
+        _fig(2, "borrowings_current", "as at 2026-03-31", "193262"),
+        _fig(3, "total_equity", "as at 2026-03-31", "3370762"),
+        _fig(4, "deferred_payment_liabilities_non_current", "as at 2026-03-31", "995517"),
+    ]
+    only_one = {r.metric for r in calc.compute_period(_figures(*base), "FY2026")}
+    assert "total_debt_incl_deferred_payments" not in only_one  # missing line is not zero
+
+    both = _figures(
+        *base, _fig(5, "deferred_payment_liabilities_current", "as at 2026-03-31", "49620")
+    )
+    results = {r.metric: r for r in calc.compute_period(both, "FY2026")}
+    assert results["total_debt_incl_deferred_payments"].value == D("1752947")
+    assert results["debt_to_equity_incl_deferred_payments"].value == D("0.5200")
+    assert results["debt_to_equity"].value == D("0.2100")  # the borrowings-only view stays

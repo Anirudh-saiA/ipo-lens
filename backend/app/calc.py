@@ -38,6 +38,13 @@ def margin_pct(numerator: Decimal, revenue: Decimal) -> Decimal:
     return numerator / revenue * HUNDRED
 
 
+def debt_including_deferred_payments(
+    debt: Decimal, deferred_non_current: Decimal, deferred_current: Decimal
+) -> Decimal:
+    """Borrowings plus deferred payment liabilities (spectrum dues and the like)."""
+    return debt + deferred_non_current + deferred_current
+
+
 def return_on_average_equity_pct(
     profit: Decimal, opening_equity: Decimal, closing_equity: Decimal
 ) -> Decimal:
@@ -240,6 +247,33 @@ def compute_period(figures: dict[tuple[str, str], ExtractedFigure], period: str)
             [d, eq_close[0]],
             point_in_time=True,
         )
+
+    # A second view of debt for companies that owe deferred payments (e.g. telecom
+    # spectrum). Only when both current and non-current lines are printed: a missing
+    # line is not assumed to be zero.
+    dp_nc = get("deferred_payment_liabilities_non_current", bs)
+    dp_c = get("deferred_payment_liabilities_current", bs)
+    if d is not None and dp_nc is not None and dp_c is not None:
+        d_all = add(
+            "total_debt_incl_deferred_payments",
+            money,
+            "total_debt + deferred_payment_liabilities_non_current"
+            " + deferred_payment_liabilities_current",
+            debt_including_deferred_payments,
+            [b_nc, b_c, dp_nc, dp_c],
+            [d, dp_nc.value, dp_c.value],
+            point_in_time=True,
+        )
+        if d_all is not None and eq_close is not None:
+            add(
+                "debt_to_equity_incl_deferred_payments",
+                "x",
+                "total_debt_incl_deferred_payments / total_equity",
+                debt_to_equity,
+                [b_nc, b_c, dp_nc, dp_c, *eq_close[1]],
+                [d_all, eq_close[0]],
+                point_in_time=True,
+            )
     return results
 
 

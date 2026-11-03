@@ -92,6 +92,19 @@ METRICS: list[MetricRule] = [
         re.compile(r"^borrowings$"),
         section="current_liabilities",
     ),
+    # Deferred payments for spectrum and similar: debt-like, but not borrowings
+    MetricRule(
+        "deferred_payment_liabilities_non_current",
+        "balance_sheet",
+        re.compile(r"^deferred payment liabilit(y|ies)$"),
+        section="non_current_liabilities",
+    ),
+    MetricRule(
+        "deferred_payment_liabilities_current",
+        "balance_sheet",
+        re.compile(r"^deferred payment liabilit(y|ies)$"),
+        section="current_liabilities",
+    ),
     MetricRule(
         "cash_and_cash_equivalents", "balance_sheet", re.compile(r"^cash and cash equivalents$")
     ),
