@@ -80,3 +80,18 @@ Started with the BCSSL RHP only, by choice; the gate needs 3 to 5 prospectuses, 
 - **Header assignment:** touching pieces are joined first ("3" "1," -> "31,"; "M" "arch" -> "March"). A month belongs to the column region holding its centre (regions split at midpoints between value columns, since headers are centred or left-aligned and numbers right-aligned). A day or year belongs to its month: the nearest month to its left on the same line, else a month directly above or below it, else its region. In a range ("April 1, 2026 to June 30, 2026") the later date wins.
 - **Operating cash flow label** now matches any "net cash ... operating activities" wording ("net cash flows generated from", "(used in)/generated from"), and was checked not to match investing or financing lines.
 - Fusion CX is profitable in all periods, so the loss-making case is still untested.
+
+### Milestone 2 gate result (2026-11-04)
+
+Three prospectuses, golden values read from the owner's screenshots of the statement pages:
+
+| Prospectus | Layout | Checked | Exact | Within 0.01 | Wrong | Missing |
+|---|---|---|---|---|---|---|
+| BCSSL RHP | ruled tables, standalone | 20 | 17 | 3 | 0 | 0 |
+| Jio Platforms RHP | no ruling lines, consolidated | 16 | 16 | 0 | 0 | 0 |
+| Fusion CX RHP | ruled tables, consolidated, range headers | 15 | 15 | 0 | 0 | 0 |
+| Total | | 51 | 48 | 3 | 0 | 0 |
+
+Per metric: revenue 12/12, PAT 12/12, operating cash flow 12/12 exact; adjusted EBITDA 3/4 exact + 1 within 0.01; total debt 2/4 exact + 2 within 0.01; balance-sheet lines 7/7. The 0.01 differences are the RHP's own rounding (printed totals vs the sum of rounded parts).
+
+Not covered: a loss-making company; EBITDA golden values exist for BCSSL only; issue size, fresh issue vs OFS and price band move to milestone 3.

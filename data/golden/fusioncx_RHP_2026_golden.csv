@@ -1,19 +1,19 @@
 metric,period,golden_value,unit,source_page,verified_by,notes
-revenue_from_operations,3M ended 2026-06-30,,INR million,67,NEEDS CHECK,"Revenue from operations"
-revenue_from_operations,FY2026,,INR million,67,NEEDS CHECK,""
-revenue_from_operations,FY2025,,INR million,67,NEEDS CHECK,""
-revenue_from_operations,FY2024,,INR million,67,NEEDS CHECK,""
-profit_after_tax,3M ended 2026-06-30,,INR million,67,NEEDS CHECK,"Restated profit for the period/year"
-profit_after_tax,FY2026,,INR million,67,NEEDS CHECK,""
-profit_after_tax,FY2025,,INR million,67,NEEDS CHECK,""
-profit_after_tax,FY2024,,INR million,67,NEEDS CHECK,""
-net_cash_from_operating_activities,3M ended 2026-06-30,,INR million,68,NEEDS CHECK,"Net cash flows generated from operating activities (A)"
-net_cash_from_operating_activities,FY2026,,INR million,68,NEEDS CHECK,""
-net_cash_from_operating_activities,FY2025,,INR million,68,NEEDS CHECK,""
-net_cash_from_operating_activities,FY2024,,INR million,68,NEEDS CHECK,""
-total_equity,as at 2026-03-31,,INR million,66,NEEDS CHECK,"Total equity"
-borrowings_non_current,as at 2026-03-31,,INR million,66,NEEDS CHECK,"Non-current Borrowings"
-borrowings_current,as at 2026-03-31,,INR million,66,NEEDS CHECK,"Current Borrowings"
-fresh_issue_size,issue,,INR million,1,,"milestone 3"
-offer_for_sale_size,issue,,INR million,1,,"milestone 3"
-price_band,issue,,INR,1,,"milestone 3"
+revenue_from_operations,3M ended 2026-06-30,4904.84,INR million,67,owner screenshot of page 67 (2026-11-04),Revenue from operations
+revenue_from_operations,FY2026,18181.38,INR million,67,owner screenshot of page 67 (2026-11-04),
+revenue_from_operations,FY2025,13292.96,INR million,67,owner screenshot of page 67 (2026-11-04),
+revenue_from_operations,FY2024,9913.15,INR million,67,owner screenshot of page 67 (2026-11-04),
+profit_after_tax,3M ended 2026-06-30,556.98,INR million,67,owner screenshot of page 67 (2026-11-04),Restated profit for the period/year
+profit_after_tax,FY2026,1698.40,INR million,67,owner screenshot of page 67 (2026-11-04),
+profit_after_tax,FY2025,743.14,INR million,67,owner screenshot of page 67 (2026-11-04),
+profit_after_tax,FY2024,362.60,INR million,67,owner screenshot of page 67 (2026-11-04),
+net_cash_from_operating_activities,3M ended 2026-06-30,232.01,INR million,68,owner screenshot of page 68 (2026-11-04),Net cash flows generated from operating activities (A)
+net_cash_from_operating_activities,FY2026,2642.24,INR million,68,owner screenshot of page 68 (2026-11-04),
+net_cash_from_operating_activities,FY2025,1024.48,INR million,68,owner screenshot of page 68 (2026-11-04),
+net_cash_from_operating_activities,FY2024,392.58,INR million,68,owner screenshot of page 68 (2026-11-04),
+total_equity,as at 2026-03-31,5606.02,INR million,66,owner screenshot of page 66 (2026-11-04),Total equity
+borrowings_non_current,as at 2026-03-31,797.67,INR million,66,owner screenshot of page 66 (2026-11-04),Non-current Borrowings
+borrowings_current,as at 2026-03-31,1870.97,INR million,66,owner screenshot of page 66 (2026-11-04),Current Borrowings
+fresh_issue_size,issue,,INR million,1,,milestone 3
+offer_for_sale_size,issue,,INR million,1,,milestone 3
+price_band,issue,,INR,1,,milestone 3
