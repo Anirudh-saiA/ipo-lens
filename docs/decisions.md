@@ -25,3 +25,13 @@ Each entry: the choice, and why.
 - **Tests use a separate `<db>_test` database,** created automatically, so migration tests never delete ingested documents.
 - **Test PDFs are generated with reportlab** (BSD, dev only) instead of committing a real prospectus to the repo.
 - **Ingestion is a command-line step for now** (`python -m app.cli ingest`). An upload endpoint and fetching from SEBI URLs come later; fetching needs rate limiting and caching per hard rule 9.
+
+### Milestone 1 gate result (2026-11-03)
+
+- BCSSL RHP: 599 of 599 pages stored; 819 tables found.
+- 20 of 20 hand-checked table cells match (PDF pages 91 and 401), recorded in
+  `data/golden/bcssl_RHP_2026_m1_cells.csv`. Values were read from the owner's screenshots of
+  those pages.
+- Found for milestone 2: units ("₹ in million") sit above tables, in page text, not in cells;
+  values on page 91 sit one column left of their date headers; some labels have stray spaces
+  ("T otal"); the June 30, 2026 column is a 3-month period, so its ratios are not annualised.
