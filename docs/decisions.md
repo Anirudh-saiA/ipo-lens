@@ -51,3 +51,14 @@ Started with the BCSSL RHP only, by choice; the gate needs 3 to 5 prospectuses, 
 - **Part-year ratios are labelled "not annualised".** ROE is skipped where the opening equity is not in the document (FY2024 here).
 - **Not computed yet:** ROCE, because the RHP's capital employed uses tangible net worth and deferred tax liability, which are not extracted yet. Operating cash flow is extracted but not used in a ratio yet.
 - **Accuracy counts a difference of 0.01 or less separately as "rounding",** never as exact. Example: the RHP's own total debt of 2,736.91 is 0.01 above the sum of its rounded borrowings lines (2,736.90).
+
+### BCSSL golden set result (2026-11-03)
+
+- 20 verified values: 17 exact, 3 within 0.01 (the RHP's own rounding), 0 wrong, 0 missing.
+- **The RHP reports two different ROE figures.** KPI table, PDF page 137 (printed 131):
+  11.65%, 29.92%, 41.76%, 48.20%. Ratio note, PDF page 401: 11.68%, 29.85%, 41.73%, 48.26%
+  (June 2026, FY2026, FY2025, FY2024). Our Python ROE (PAT / average equity) gives 29.85% and
+  41.73%, matching page 401. The KPI table's definition is not shown on that page. Per hard
+  rule 5, the product must show this as a contradiction in the document, not pick one silently.
+- PDF page numbers and printed page numbers differ (137 vs 131 here). Citations use the PDF
+  page; showing the printed number too would help users find it in a paper copy.
