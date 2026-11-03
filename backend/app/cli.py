@@ -10,6 +10,7 @@ python -m app.cli qa-eval EVAL_CSV
 """
 
 import argparse
+import sys
 import time
 from datetime import date
 from pathlib import Path
@@ -29,6 +30,9 @@ from app.risks import extract_risks
 
 
 def main(argv: list[str] | None = None) -> None:
+    # Windows consoles default to cp1252, which cannot print ₹
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(prog="python -m app.cli")
     sub = parser.add_subparsers(dest="command", required=True)
 

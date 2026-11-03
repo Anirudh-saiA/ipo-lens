@@ -138,3 +138,13 @@ Not covered: a loss-making company; EBITDA golden values exist for BCSSL only; i
 - **EBITDA does not depend on GMP.** The owner asked for EBITDA to be prominent; it is now shown large with revenue and profit. It comes from the company's restated accounts, not market prices.
 - **Status (open, upcoming, closed)** comes from the bid dates printed in each prospectus, compared with today's date. No market data source is used. On 4 Nov 2026 all six IPOs held are closed; upcoming ones need RHPs filed after 26 Oct 2026, which SEBI had not listed yet.
 - **Site redesign at the owner's request:** light only (no dark mode), warm paper background, serif headings, one green accent; IPOs grouped by status; headline Revenue, EBITDA and PAT shown large; losses in brackets in muted red.
+
+### Milestone 4 gate result (2026-11-04): not passed
+
+Local model phi3.5 on CPU, 32 questions (about 1 to 1.5 minutes per answered question):
+- Unanswerable refused: 10/10 (advice, predictions, GMP, facts not in the documents).
+- Answerable, correct with a verified citation: 11/22. Two more were right but scored wrong by strict matching ("₹ 1" for "1 each"; "JSWSCPL", the RHP's own abbreviation).
+- **5 answers were wrong figures with real citations:** the model took the wrong line or period from a correct page (profit before tax for profit after tax, the June quarter for the fiscal year, the anchor date for the open date). The number guard cannot catch these because the wrong number is printed on the cited page.
+- 6 were refusals (cited pages not retrieved, or no evidence found).
+
+Conclusion: a small local model must not answer questions about figures. Proposed: answer figure and date questions from the verified extracted data (51/51 checked values correct, each with a page), and use the model only for text questions. Owner to decide; until then the ask box should be treated as experimental. Results: `data/golden/qa_eval_results.csv`.
