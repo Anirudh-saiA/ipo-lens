@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.facts_qa import answer_from_data
 from app.models import Chunk
 from app.models_ai import AnswerModel, Embedder
 
@@ -141,6 +142,20 @@ def answer_question(
 ) -> Answer:
     if is_advice_request(question):
         return Answer(question, ADVICE_REFUSAL, [], True, "advice or prediction requested")
+
+    # Figures and dates come from verified data, never from the model (it mixed up lines
+    # and periods in testing). Only other questions reach the model.
+    from_data = answer_from_data(session, document_id, question)
+    if from_data is not None:
+        return Answer(
+            question,
+            from_data.answer,
+            from_data.pages,
+            abstained=not from_data.found,
+            reason=None if from_data.found else "not in verified data",
+            model=None,
+            output_label=from_data.output_label or "AI interpretation",
+        )
 
     excerpts = retrieve(session, document_id, question, embedder, k)
     if not excerpts:

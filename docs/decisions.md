@@ -148,3 +148,6 @@ Local model phi3.5 on CPU, 32 questions (about 1 to 1.5 minutes per answered que
 - 6 were refusals (cited pages not retrieved, or no evidence found).
 
 Conclusion: a small local model must not answer questions about figures. Proposed: answer figure and date questions from the verified extracted data (51/51 checked values correct, each with a page), and use the model only for text questions. Owner to decide; until then the ask box should be treated as experimental. Results: `data/golden/qa_eval_results.csv`.
+
+### Verified-data answers (2026-11-04, work in progress)
+Figure and date questions are now answered from `app/facts_qa.py` (extracted figures, Python metrics, issue facts) with their pages; only other questions reach the model. Working example: Acevector FY2026 profit -> "a loss of ₹455.06 million", p.77. NOT finished: 2 older tests in tests/test_qa.py now fail because their revenue questions route to data (need updating), one mypy error in facts_qa.py, no new routing tests, evaluation not rerun, 3 new prospectuses still being indexed for the text model.
