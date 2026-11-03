@@ -73,3 +73,38 @@ def test_page_endpoint_returns_text_and_tables(sample_pdf: Path, db_session: Ses
     assert client.get(f"/documents/{result.document_id}").json()["page_count"] == 3
     assert client.get(f"/documents/{result.document_id}/pages/4").status_code == 404
     assert client.get("/documents/999999").status_code == 404
+
+
+@pytest.mark.db
+def test_issue_and_risk_endpoints(sample_pdf: Path, db_session: Session) -> None:
+    from app.models import IssueFact, Risk
+
+    result = ingest_pdf(db_session, sample_pdf, company="Sample Ltd", doc_type="RHP")
+    db_session.add(
+        IssueFact(
+            document_id=result.document_id,
+            page_no=1,
+            field="fresh_issue_amount",
+            value_text="1,830.57",
+            unit="INR million",
+            source_text="x",
+            extraction_method="t",
+        )
+    )
+    db_session.add(
+        Risk(
+            document_id=result.document_id,
+            page_no=2,
+            number=1,
+            text="We depend on one supplier.",
+            category="operational",
+            category_method="keyword rules v1",
+            origin="disclosed",
+        )
+    )
+    db_session.commit()
+    client = TestClient(app)
+    (fact,) = client.get(f"/documents/{result.document_id}/issue").json()
+    assert (fact["page_no"], fact["output_label"]) == (1, "verified fact (from the document)")
+    (risk,) = client.get(f"/documents/{result.document_id}/risks").json()
+    assert (risk["number"], risk["page_no"], risk["category_method"]) == (1, 2, "keyword rules v1")

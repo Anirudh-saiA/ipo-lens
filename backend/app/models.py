@@ -142,6 +142,30 @@ class Risk(Base):
     category: Mapped[str] = mapped_column(Text)
     text: Mapped[str] = mapped_column(Text)
     origin: Mapped[str] = mapped_column(String(16))
+    number: Mapped[int | None] = mapped_column(Integer)  # as numbered in the document
+    category_method: Mapped[str | None] = mapped_column(Text)  # how category was assigned
+
+
+class IssueFact(Base):
+    """A fact about the offer as printed (sizes, dates, use of proceeds), with its page.
+
+    value_text keeps the printed wording; value_number is set only when the document
+    prints a number. '[●]' (to be filled in later) is stored as text with no number."""
+
+    __tablename__ = "issue_facts"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    document_id: Mapped[int] = mapped_column(
+        ForeignKey("documents.id", ondelete="CASCADE"), index=True
+    )
+    page_no: Mapped[int] = mapped_column(Integer)
+    field: Mapped[str] = mapped_column(Text, index=True)
+    label: Mapped[str | None] = mapped_column(Text)  # e.g. the object or the selling shareholder
+    value_text: Mapped[str] = mapped_column(Text)
+    value_number: Mapped[Decimal | None] = mapped_column(Numeric)
+    unit: Mapped[str | None] = mapped_column(Text)
+    source_text: Mapped[str] = mapped_column(Text)
+    extraction_method: Mapped[str] = mapped_column(Text)
 
 
 class Ipo(Base):

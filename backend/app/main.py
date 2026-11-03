@@ -7,8 +7,8 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.db import engine, get_session
-from app.models import Document, Page, PageTable
-from app.schemas import DocumentOut, PageOut, TableOut
+from app.models import Document, IssueFact, Page, PageTable, Risk
+from app.schemas import DocumentOut, IssueFactOut, PageOut, RiskOut, TableOut
 
 SessionDep = Annotated[Session, Depends(get_session)]
 
@@ -68,3 +68,23 @@ def get_page(document_id: int, page_no: int, session: SessionDep) -> PageOut:
         text=page.text,
         tables=[TableOut.model_validate(t) for t in tables],
     )
+
+
+@app.get("/documents/{document_id}/issue")
+def get_issue_facts(document_id: int, session: SessionDep) -> list[IssueFactOut]:
+    """Offer structure, dates and use of proceeds, each with its page."""
+    facts = session.scalars(
+        select(IssueFact)
+        .where(IssueFact.document_id == document_id)
+        .order_by(IssueFact.page_no, IssueFact.id)
+    )
+    return [IssueFactOut.model_validate(f) for f in facts]
+
+
+@app.get("/documents/{document_id}/risks")
+def get_risks(document_id: int, session: SessionDep) -> list[RiskOut]:
+    """Risk factors as disclosed, in document order, each with its page."""
+    risks = session.scalars(
+        select(Risk).where(Risk.document_id == document_id).order_by(Risk.number, Risk.id)
+    )
+    return [RiskOut.model_validate(r) for r in risks]

@@ -95,3 +95,15 @@ Three prospectuses, golden values read from the owner's screenshots of the state
 Per metric: revenue 12/12, PAT 12/12, operating cash flow 12/12 exact; adjusted EBITDA 3/4 exact + 1 within 0.01; total debt 2/4 exact + 2 within 0.01; balance-sheet lines 7/7. The 0.01 differences are the RHP's own rounding (printed totals vs the sum of rounded parts).
 
 Not covered: a loss-making company; EBITDA golden values exist for BCSSL only; issue size, fresh issue vs OFS and price band move to milestone 3.
+
+## Milestone 3: offer structure and risk factors (2026-11-04)
+
+- **New table `issue_facts`** (migration 0005): one row per fact about the offer, with page, printed wording (`value_text`), number only when printed (`value_number`), unit and source text. The brief's `ipos` table has no page columns, so it is left for a later step that fills it from cited facts.
+- **"[●]" is stored as "[●] (not disclosed in this document)" with no number.** In all three RHPs the price band, bid lot and most share counts are [●]; they are published later (price band advertisement or addendum). Nothing is estimated.
+- **Cover table:** columns are matched to "Fresh issue / Offer for sale / Total" by order of non-empty cells, because merged cells shift column indexes. "Not applicable" offer for sale is stored as 0 with that wording.
+- **Dates** (anchor, bid open, bid close) come from the cover tables; a date split across rows without a year is skipped, and the first complete statement in the document is used.
+- **Use of proceeds** is read from word positions on the "OBJECTS OF THE ISSUE/OFFER" pages (heading in capitals, so mentions inside risk factors do not count), from the first table that lists objects, stopping at "Net Proceeds"/"Total" or the next table. Wrapped labels are joined.
+- **Risk factors:** from the "Risk Factors" heading to "SECTION III"; headings must run in number order (one missed number allowed), words inside detected tables are skipped, and a heading runs to the end of its first sentence. Result: 74/74, 65/65 and 75/75 headings, no gaps.
+- **Risk categories use keyword rules on the cause part of the heading** (before "could/may/will ..."), since nearly every heading ends with "... financial condition". Stored with `category_method = "keyword rules v1"`; no AI. About 40% stay "uncategorised" rather than guessed, and some rules misfire (e.g. Fusion #4, revenue concentration, labelled "legal"). Better categorisation is an open item; an AI classifier would have to be labelled "AI interpretation" (hard rule 4).
+- **Output labels in the API:** issue facts are "verified fact (from the document)"; risk headings are "company claim (disclosed risk factor)". Whether a keyword category needs its own label is an open question for the owner.
+- **Not done:** promoter holding before and after the issue. Post-issue holding is [●] in all three RHPs, and pre-issue tables differ a lot between them.
