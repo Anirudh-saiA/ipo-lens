@@ -107,3 +107,10 @@ Not covered: a loss-making company; EBITDA golden values exist for BCSSL only; i
 - **Risk categories use keyword rules on the cause part of the heading** (before "could/may/will ..."), since nearly every heading ends with "... financial condition". Stored with `category_method = "keyword rules v1"`; no AI. About 40% stay "uncategorised" rather than guessed, and some rules misfire (e.g. Fusion #4, revenue concentration, labelled "legal"). Better categorisation is an open item; an AI classifier would have to be labelled "AI interpretation" (hard rule 4).
 - **Output labels in the API:** issue facts are "verified fact (from the document)"; risk headings are "company claim (disclosed risk factor)". Whether a keyword category needs its own label is an open question for the owner.
 - **Not done:** promoter holding before and after the issue. Post-issue holding is [●] in all three RHPs, and pre-issue tables differ a lot between them.
+
+### Milestone 3 gate result (2026-11-04)
+
+- 10 of 10 spot-checked items match their PDF page (dates, use of proceeds, offer sizes, a seller, two risk headings), recorded in `data/golden/m3_spot_check.csv`.
+- Checked by Claude from the PDF pages rendered as images, at the owner's request, instead of owner screenshots. This is independent of the text extraction being tested, but it is not a human check.
+- Risk categories: 1 of 2 checked is right. Fusion #4 (revenue concentration outside India) is labelled "legal". Keyword categories stay an open weakness.
+- **Contradiction found in the Fusion CX RHP:** FY2026 revenue from operations is ₹18,182.38 million in the revenue-by-geography table (PDF page 29) and ₹18,181.38 million in the restated profit and loss (PDF page 67). To be shown as a contradiction (hard rule 5), not resolved.
