@@ -14,6 +14,7 @@ from sqlalchemy import (
     CheckConstraint,
     Date,
     DateTime,
+    Float,
     ForeignKey,
     Integer,
     Numeric,
@@ -22,7 +23,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 EMBEDDING_DIM = 384
@@ -61,6 +62,27 @@ class Page(Base):
     document_id: Mapped[int] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"))
     page_no: Mapped[int] = mapped_column(Integer)
     text: Mapped[str] = mapped_column(Text)
+
+
+class PageTable(Base):
+    """A table as found on a page, stored cell by cell before any interpretation."""
+
+    __tablename__ = "page_tables"
+    __table_args__ = (
+        UniqueConstraint(
+            "document_id", "page_no", "table_index", name="uq_page_tables_document_page_index"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    document_id: Mapped[int] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"))
+    page_no: Mapped[int] = mapped_column(Integer)
+    table_index: Mapped[int] = mapped_column(Integer)
+    rows: Mapped[list[list[str | None]]] = mapped_column(JSONB)
+    n_rows: Mapped[int] = mapped_column(Integer)
+    n_cols: Mapped[int] = mapped_column(Integer)
+    bbox: Mapped[list[float]] = mapped_column(ARRAY(Float))
+    extraction_method: Mapped[str] = mapped_column(Text)
 
 
 class ExtractedFigure(Base):

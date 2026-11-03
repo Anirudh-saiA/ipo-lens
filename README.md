@@ -80,6 +80,21 @@ npm run dev
 
 Open <http://localhost:3000>.
 
+## Ingesting a prospectus
+
+Put the PDF in `data\samples\` (git-ignored), then from `backend/` with the venv active:
+
+```powershell
+python -m app.cli ingest ..\data\samples\bcssl_RHP_2026.pdf --company "Bombay Coated and Special Steels Limited" --doc-type RHP --filing-date 2026-10-21
+```
+
+`--doc-type` is one of `DRHP`, `RHP`, `addendum`, `corrigendum`, `prospectus`. Running it
+again on the same file does nothing (files are matched by their SHA-256).
+
+With the API running, read any page back at
+`http://localhost:8000/documents/1/pages/42`. Page numbers are the PDF viewer's page
+numbers, starting at 1.
+
 ## Checks
 
 Backend (from `backend/`, with the venv active and the database running):
@@ -91,7 +106,8 @@ mypy app tests
 pytest
 ```
 
-Database tests are skipped, not failed, when Postgres is not running.
+Database tests use a separate `ipolens_test` database (created automatically), so they never
+touch ingested documents. They are skipped, not failed, when Postgres is not running.
 
 Frontend (from `frontend/`):
 
