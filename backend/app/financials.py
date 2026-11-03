@@ -113,8 +113,8 @@ METRICS: list[MetricRule] = [
         "net_cash_from_operating_activities",
         "cash_flow",
         re.compile(
-            r"^net cash (flow )?(from|generated from|\(used in\)/generated from"
-            r"|generated from/\(used in\)) operating activities"
+            # "net cash from", "net cash flows generated from", "(used in)/generated from"
+            r"^net cash (flows? )?[a-z/() ]*\boperating activities"
         ),
     ),
 ]
@@ -406,28 +406,86 @@ def _column_of(word: Word, spans: list[tuple[float, float]], slack: float = 12.0
     return nearest if gaps[nearest] <= slack else None
 
 
+def _header_token(word: Word) -> str:
+    return rejoin_split_capitals(str(word[0])).strip(",. ").lower()
+
+
+def _merge_touching(line: list[Word], gap: float = 1.0) -> list[Word]:
+    """Rejoin pieces PDF text split apart without a space: '3' '1,' -> '31,', 'M' 'arch'."""
+    merged: list[Word] = []
+    for word in line:
+        if merged and float(word[1]) - float(merged[-1][2]) < gap:
+            last = merged[-1]
+            merged[-1] = [f"{last[0]}{word[0]}", last[1], word[2], last[3]]
+        else:
+            merged.append(list(word))
+    return merged
+
+
+def _owning_month(
+    word: Word, before: list[Word], month_words: list[tuple[Word, int | None]]
+) -> int | None:
+    """Column of the month a day or year belongs to, if it can be told by position."""
+    x0, x1 = float(word[1]), float(word[2])
+    for candidate in reversed(before):  # same line: the nearest month to the left
+        if _header_token(candidate) in MONTHS:
+            if x0 - float(candidate[2]) <= 40:
+                return next((c for w, c in month_words if w is candidate or w == candidate), None)
+            break
+    for month, column in month_words:  # another line: a month directly above or below
+        if min(x1, float(month[2])) - max(x0, float(month[1])) > 0:
+            return column
+    return None
+
+
 def periods_from_header(
     header: list[list[Word]], spans: list[tuple[float, float]], statement: str
 ) -> list[Period]:
-    """Assign each month, day and year in the header to the column it sits over."""
+    """Assign each month, day and year in the header to its column.
+
+    Headers are centred or left-aligned while numbers are right-aligned, so a month goes
+    to the column whose region (split at the midpoints between columns) holds its centre.
+    A day or year belongs to its month: the month just before it on the same line, else
+    a month directly above or below it, else the region it sits in. Where a column shows
+    a range ('April 1, 2026 to June 30, 2026'), the later date wins."""
     months: list[int | None] = [None] * len(spans)
     days: list[int | None] = [None] * len(spans)
     years: list[int | None] = [None] * len(spans)
     fiscal = False
-    for line in header:
-        for word in line:
-            text = rejoin_split_capitals(str(word[0])).strip(",. ").lower()
+    cuts = [(spans[i][1] + spans[i + 1][0]) / 2 for i in range(len(spans) - 1)]
+
+    def region(word: Word) -> int | None:
+        centre = (float(word[1]) + float(word[2])) / 2
+        if centre < spans[0][0] - 70 or centre > spans[-1][1] + 30:
+            return None
+        return sum(centre > cut for cut in cuts)
+
+    lines = [_merge_touching(line) for line in header]
+    month_words = [
+        (word, region(word)) for line in lines for word in line if _header_token(word) in MONTHS
+    ]
+    for line in lines:
+        for index, word in enumerate(line):
+            text = _header_token(word)
             if text == "fiscal":
                 fiscal = True
                 continue
-            column = _column_of(word, spans)
+            if text in MONTHS:
+                column = region(word)
+                if column is not None:
+                    months[column] = MONTHS[text]
+                continue
+            is_year = bool(re.fullmatch(r"20\d\d", text))
+            if not is_year and not re.fullmatch(r"[0-3]?\d", text):
+                continue
+            column = _owning_month(word, line[:index], month_words)
+            if column is None:
+                column = region(word)
             if column is None:
                 continue
-            if text in MONTHS:
-                months[column] = MONTHS[text]
-            elif re.fullmatch(r"20\d\d", text):
+            if is_year:
                 years[column] = int(text)
-            elif re.fullmatch(r"[0-3]?\d", text):
+            else:
                 days[column] = int(text)
     periods = []
     for month, day, year in zip(months, days, years, strict=True):
@@ -441,11 +499,22 @@ def periods_from_header(
     return periods
 
 
-def extract_from_words(words: list[Word], statement: str, unit: str, page_no: int) -> list[Figure]:
+@dataclass
+class Layout:
+    lines: list[list[Word]]
+    spans: list[tuple[float, float]]
+    first_data: int  # index of the first line carrying a full row of values
+    periods: list[Period]
+
+
+def read_layout(words: list[Word], statement: str) -> Layout | None:
+    """Columns and their periods from word positions. Header text order cannot be trusted
+    (a header can read 'April 1, 2026 to ended March 31, ... June 30, 2026 2026 2025'),
+    so each date is tied to the column it sits over; in a range, the later date wins."""
     lines = _lines(words)
     spans = _columns(lines)
     if spans is None:
-        return []
+        return None
     first_data = next(
         (
             i
@@ -455,10 +524,21 @@ def extract_from_words(words: list[Word], statement: str, unit: str, page_no: in
         None,
     )
     if first_data is None:
-        return []
+        return None
     periods = periods_from_header(lines[:first_data], spans, statement)
-    if not periods:
+    return Layout(lines, spans, first_data, periods) if periods else None
+
+
+def extract_from_words(words: list[Word], statement: str, unit: str, page_no: int) -> list[Figure]:
+    layout = read_layout(words, statement)
+    if layout is None:
         return []
+    lines, spans, first_data, periods = (
+        layout.lines,
+        layout.spans,
+        layout.first_data,
+        layout.periods,
+    )
 
     rows: list[Row] = []
     pending: list[Word] = []  # a label line whose values sit on the next line
@@ -526,6 +606,12 @@ def detect_basis(session: Session, document_id: int) -> str:
 
 def _from_tables(session: Session, page: Page, statement: str, unit: str) -> list[Figure]:
     figures: list[Figure] = []
+    # Periods come from word positions when stored. Header text order can pair a month
+    # with the wrong year without any visible error, so it is used only for pages stored
+    # without positions, and never as a fallback when positions disagree or fail.
+    layout = read_layout(page.words, statement) if page.words else None
+    if page.words and layout is None:
+        return []
     tables = session.scalars(
         select(PageTable)
         .where(PageTable.document_id == page.document_id, PageTable.page_no == page.page_no)
@@ -545,11 +631,14 @@ def _from_tables(session: Session, page: Page, statement: str, unit: str) -> lis
             ),
             None,
         )
-        header = page.text
-        if first_label:
-            cut = page.text.lower().find(first_label[:20])
-            header = page.text[:cut] if cut > 0 else page.text
-        periods = find_periods(header, statement)
+        if layout is not None:
+            periods = layout.periods
+        else:
+            header = page.text
+            if first_label:
+                cut = page.text.lower().find(first_label[:20])
+                header = page.text[:cut] if cut > 0 else page.text
+            periods = find_periods(header, statement)
         if periods:
             figures += extract_from_table(
                 table.rows, statement, periods, unit, page.page_no, table.table_index
