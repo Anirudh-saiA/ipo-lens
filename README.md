@@ -95,6 +95,20 @@ With the API running, read any page back at
 `http://localhost:8000/documents/1/pages/42`. Page numbers are the PDF viewer's page
 numbers, starting at 1.
 
+## Financial figures and ratios
+
+From `backend/` with the venv active:
+
+```powershell
+python -m app.cli financials 1
+python -m app.cli accuracy 1 ..\data\goldencssl_RHP_2026_golden.csv
+```
+
+The first command extracts reported figures from the restated statements (each with its
+page) and then computes ratios in Python. The second compares both against the
+hand-verified golden CSV and reports accuracy per metric. Definitions are in
+[docs/decisions.md](docs/decisions.md).
+
 ## Checks
 
 Backend (from `backend/`, with the venv active and the database running):

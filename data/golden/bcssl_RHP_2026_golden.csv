@@ -1,0 +1,24 @@
+metric,period,golden_value,unit,source_page,verified_by,notes
+revenue_from_operations,3M ended 2026-06-30,3970.80,INR million,91,owner screenshot of page 91 (2026-11-03),
+revenue_from_operations,FY2026,12668.18,INR million,91,owner screenshot of page 91 (2026-11-03),
+revenue_from_operations,FY2025,10557.07,INR million,91,owner screenshot of page 91 (2026-11-03),
+revenue_from_operations,FY2024,7552.59,INR million,91,owner screenshot of page 91 (2026-11-03),
+profit_after_tax,3M ended 2026-06-30,150.75,INR million,91,owner screenshot of page 91 (2026-11-03),
+profit_after_tax,FY2026,305.39,INR million,91,owner screenshot of page 91 (2026-11-03),
+profit_after_tax,FY2025,286.72,INR million,91,owner screenshot of page 91 (2026-11-03),
+profit_after_tax,FY2024,211.38,INR million,91,owner screenshot of page 91 (2026-11-03),
+total_debt,as at 2026-06-30,2736.91,INR million,401,owner screenshot of page 401 (2026-11-03),"Total Debt line of the Debt-Equity ratio"
+total_debt,as at 2026-03-31,3384.54,INR million,401,owner screenshot of page 401 (2026-11-03),"Total Debt line of the Debt-Equity ratio"
+total_debt,as at 2025-03-31,2769.61,INR million,401,owner screenshot of page 401 (2026-11-03),"Total Debt line of the Debt-Equity ratio"
+total_debt,as at 2024-03-31,2341.61,INR million,401,owner screenshot of page 401 (2026-11-03),"Total Debt line of the Debt-Equity ratio"
+adjusted_ebitda,3M ended 2026-06-30,,INR million,137,NEEDS CHECK,"Adjusted EBITDA row of the KPI table"
+adjusted_ebitda,FY2026,,INR million,137,NEEDS CHECK,"Adjusted EBITDA row of the KPI table"
+adjusted_ebitda,FY2025,,INR million,137,NEEDS CHECK,"Adjusted EBITDA row of the KPI table"
+adjusted_ebitda,FY2024,,INR million,137,NEEDS CHECK,"Adjusted EBITDA row of the KPI table"
+net_cash_from_operating_activities,3M ended 2026-06-30,,INR million,92,NEEDS CHECK,"Net cash from operating activities"
+net_cash_from_operating_activities,FY2026,,INR million,92,NEEDS CHECK,"Net cash from operating activities"
+net_cash_from_operating_activities,FY2025,,INR million,92,NEEDS CHECK,"Net cash from operating activities"
+net_cash_from_operating_activities,FY2024,,INR million,92,NEEDS CHECK,"Net cash from operating activities"
+fresh_issue_size,issue,1830.57,INR million,1,owner screenshot of the cover page (2026-11-03),"Up to; extraction is milestone 3"
+offer_for_sale_size,issue,0,INR million,1,owner screenshot of the cover page (2026-11-03),"Cover says Not Applicable; extraction is milestone 3"
+price_band,issue,,INR,1,owner screenshot of the cover page (2026-11-03),"Not in the RHP (cover shows [●]); expected in a price band addendum; milestone 3"

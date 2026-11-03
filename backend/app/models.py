@@ -113,8 +113,14 @@ class CalculatedMetric(Base):
     __tablename__ = "calculated_metrics"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    document_id: Mapped[int] = mapped_column(
+        ForeignKey("documents.id", ondelete="CASCADE"), index=True
+    )
     metric: Mapped[str] = mapped_column(Text, index=True)
+    period: Mapped[str] = mapped_column(Text)
+    unit: Mapped[str] = mapped_column(Text)
     formula: Mapped[str] = mapped_column(Text)
+    note: Mapped[str | None] = mapped_column(Text)
     input_figure_ids: Mapped[list[int]] = mapped_column(ARRAY(BigInteger))
     value: Mapped[Decimal] = mapped_column(Numeric)
     computed_at: Mapped[datetime] = mapped_column(

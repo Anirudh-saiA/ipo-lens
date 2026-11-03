@@ -35,3 +35,19 @@ Each entry: the choice, and why.
 - Found for milestone 2: units ("₹ in million") sit above tables, in page text, not in cells;
   values on page 91 sit one column left of their date headers; some labels have stray spaces
   ("T otal"); the June 30, 2026 column is a 3-month period, so its ratios are not annualised.
+
+## Milestone 2, first pass on one prospectus (2026-11-03)
+
+Started with the BCSSL RHP only, by choice; the gate needs 3 to 5 prospectuses, so it is not passed yet.
+
+- **Figures come from the restated statement tables** (profit and loss, assets and liabilities, cash flow), found by the title at the top of the page. In BCSSL these are on pages 90 to 92. Other tables that repeat the same lines (KPI tables, ratio notes) are not used as sources, to avoid double counting.
+- **Periods are read from the dates in the page header, not from column positions,** because extracted columns are often offset from their headers (page 91). A row is used only if it has exactly one value per period; otherwise it is skipped, not guessed.
+- **Where a header prints the day apart from the month, the period ends on the last day of that month.** Restated periods in Indian prospectuses end on month ends.
+- **Period labels:** `FY2026` (year to 31 March), `3M ended 2026-06-30` (part year), `as at 2026-03-31` (balance sheet).
+- **A dash in a cell means nil** in prospectus tables. It is not stored as a figure, so a ratio needing it is skipped rather than computed with zero.
+- **Basis:** `restated_consolidated` if the statement titles say so; `standalone` only when the document says it has no subsidiaries, or says standalone (BCSSL: page 406); otherwise `other`.
+- **`calculated_metrics` gained `document_id`, `period`, `unit` and `note`** (migration 0003). The brief's columns cannot say which document or period a ratio belongs to.
+- **Definitions:** EBITDA = profit before tax + finance costs + depreciation and amortisation. Adjusted EBITDA = EBITDA - other income (the RHP's own definition). Total debt = non-current + current borrowings, excluding lease liabilities (as in the RHP's ratio note). ROE uses average opening and closing equity; RoNW uses closing net worth.
+- **Part-year ratios are labelled "not annualised".** ROE is skipped where the opening equity is not in the document (FY2024 here).
+- **Not computed yet:** ROCE, because the RHP's capital employed uses tangible net worth and deferred tax liability, which are not extracted yet. Operating cash flow is extracted but not used in a ratio yet.
+- **Accuracy counts a difference of 0.01 or less separately as "rounding",** never as exact. Example: the RHP's own total debt of 2,736.91 is 0.01 above the sum of its rounded borrowings lines (2,736.90).
