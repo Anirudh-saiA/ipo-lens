@@ -132,3 +132,18 @@ def test_proceeds_keep_wrapped_labels_and_stop_at_net_proceeds() -> None:
         ("General corporate purposes", None),
     ]
     assert all(f.page_no == 116 and f.unit == "INR million" for f in facts)
+
+
+def test_price_band_and_bid_lot_from_an_addendum() -> None:
+    from app.issue import _BID_LOT, _PRICE_BAND
+
+    # BLS Polymers addendum, page 1
+    text = (
+        "PRICE BAND: ₹ 142 TO ₹ 150 PER EQUITY SHARE OF FACE VALUE OF ₹ 10 EACH. "
+        "BIDS CAN BE MADE FOR A MINIMUM OF 100 EQUITY SHARES"
+    )
+    band = _PRICE_BAND.search(text)
+    assert band is not None and band.groups() == ("142", "150")
+    lot = _BID_LOT.search(text)
+    assert lot is not None and lot.group(1) == "100"
+    assert _PRICE_BAND.search("price band of ₹[●] to ₹[●]") is None  # not yet published

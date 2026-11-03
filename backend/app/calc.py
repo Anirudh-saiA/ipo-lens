@@ -48,9 +48,11 @@ def debt_including_deferred_payments(
 def return_on_average_equity_pct(
     profit: Decimal, opening_equity: Decimal, closing_equity: Decimal
 ) -> Decimal:
+    # With negative equity at either end, an average can be small and positive and give a
+    # meaningless ROE (Acevector FY2025 would show about -382%), so refuse instead
+    if opening_equity <= 0 or closing_equity <= 0:
+        raise ZeroDivisionError("equity is not positive at both ends of the period")
     average = (opening_equity + closing_equity) / 2
-    if average <= 0:
-        raise ZeroDivisionError("average equity is not positive")
     return profit / average * HUNDRED
 
 
@@ -133,8 +135,10 @@ def compute_period(figures: dict[tuple[str, str], ExtractedFigure], period: str)
         )
         return value
 
+    # EBITDA is an operating measure, so start before one-off exceptional items when the
+    # statement prints that line (Acevector FY2025 has a ₹736.05 m exceptional loss)
     pbt, fin, dep, oth = (
-        get("profit_before_tax"),
+        get("profit_before_exceptional_items_and_tax") or get("profit_before_tax"),
         get("finance_costs"),
         get("depreciation_amortisation"),
         get("other_income"),
@@ -173,7 +177,11 @@ def compute_period(figures: dict[tuple[str, str], ExtractedFigure], period: str)
     e = add(
         "ebitda",
         money,
-        "profit_before_tax + finance_costs + depreciation_amortisation",
+        (
+            "profit_before_exceptional_items_and_tax + finance_costs + depreciation_amortisation"
+            if pbt is not None and pbt.metric == "profit_before_exceptional_items_and_tax"
+            else "profit_before_tax + finance_costs + depreciation_amortisation"
+        ),
         ebitda,
         [pbt, fin, dep],
     )

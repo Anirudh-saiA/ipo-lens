@@ -16,7 +16,7 @@ export function Citation({
       target="_blank"
       rel="noreferrer"
       title={source ? `PDF page ${page}: ${source}` : `PDF page ${page}`}
-      className="ml-1 inline-block rounded px-1 align-baseline text-[11px] font-medium text-sky-700 underline decoration-dotted underline-offset-2 hover:bg-sky-50 dark:text-sky-300 dark:hover:bg-sky-950"
+      className="ml-1 inline-block rounded px-0.5 align-baseline font-sans text-[11px] font-medium text-accent/80 underline decoration-accent/30 decoration-dotted underline-offset-2 hover:bg-accent-soft hover:text-accent"
     >
       p.{page}
     </a>

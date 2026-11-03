@@ -60,6 +60,29 @@ export interface Risk {
   output_label: OutputLabel;
 }
 
+export interface Cited {
+  value: string;
+  unit: string | null;
+  document_id: number;
+  page_no: number;
+  label: OutputLabel;
+  period: string | null;
+}
+
+export type IpoStatus = "open" | "upcoming" | "closed" | "unknown";
+
+export interface Ipo {
+  company: string;
+  primary_document_id: number;
+  documents: { id: number; doc_type: string; filing_date: string | null }[];
+  status: IpoStatus;
+  bid_open: Cited | null;
+  bid_close: Cited | null;
+  price_band: Cited | null;
+  headline: Partial<Record<"revenue_from_operations" | "ebitda" | "profit_after_tax", Cited>>;
+  as_of: string;
+}
+
 export const API_URL =
   process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -74,6 +97,7 @@ async function get<T>(path: string): Promise<T> {
 
 export const api = {
   documents: () => get<DocumentSummary[]>("/documents"),
+  ipos: () => get<Ipo[]>("/ipos"),
   document: (id: number) => get<DocumentSummary>(`/documents/${id}`),
   financials: (id: number) =>
     get<{ figures: Figure[]; metrics: Metric[] }>(`/documents/${id}/financials`),

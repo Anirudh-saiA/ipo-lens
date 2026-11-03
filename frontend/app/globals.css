@@ -1,24 +1,48 @@
 @import "tailwindcss";
 
+/* Light only, by design: the owner asked for a clean, light site. The `dark:` variant is
+   tied to a class that is never set, so no dark styles apply on any system setting. */
+@custom-variant dark (&:where(.force-dark, .force-dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --paper: #faf8f4;
+  --card: #ffffff;
+  --ink: #1f1d1a;
+  --muted: #6b655c;
+  --hairline: #e8e3da;
+  --accent: #0f5c4d;
+  --accent-soft: #e7f0ec;
+  --gold: #a8844c;
+  color-scheme: light;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-paper: var(--paper);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-hairline: var(--hairline);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-gold: var(--gold);
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  --font-sans: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-serif);
+  letter-spacing: -0.01em;
+}
+
+.figure {
+  font-variant-numeric: tabular-nums lining-nums;
 }

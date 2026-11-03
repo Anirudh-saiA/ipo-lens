@@ -11,5 +11,10 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+psycopg://ipolens:ipolens_dev@localhost:54329/ipolens"
 
+    # Local models through Ollama (free). No paid API is wired; see app/models_ai.py.
+    ollama_url: str = "http://localhost:11434"
+    embed_model: str = "snowflake-arctic-embed:33m"  # Apache 2.0, 384 dimensions
+    qa_model: str = "phi3.5"  # Microsoft Phi-3.5-mini, MIT
+
 
 settings = Settings()

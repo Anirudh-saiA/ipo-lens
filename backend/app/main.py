@@ -1,6 +1,8 @@
+from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Annotated
 
+import httpx
 from fastapi import Depends, FastAPI, HTTPException, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select, text
@@ -8,6 +10,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.db import engine, get_session
+from app.ipos import list_ipos
 from app.models import (
     CalculatedMetric,
     Document,
@@ -17,18 +20,32 @@ from app.models import (
     PageTable,
     Risk,
 )
+from app.models_ai import AnswerModel, Embedder, OllamaAnswerModel, OllamaEmbedder
+from app.qa import answer_question
 from app.schemas import (
+    AnswerOut,
     DocumentOut,
     FigureOut,
     FinancialsOut,
+    IpoOut,
     IssueFactOut,
     MetricOut,
     PageOut,
+    QuestionIn,
     RiskOut,
     TableOut,
 )
 
 SessionDep = Annotated[Session, Depends(get_session)]
+
+
+def get_embedder() -> Embedder:
+    return OllamaEmbedder()
+
+
+def get_answer_model() -> AnswerModel:
+    return OllamaAnswerModel()
+
 
 DISCLAIMER = "Research aid, not investment advice."
 
@@ -131,3 +148,42 @@ def get_financials(document_id: int, session: SessionDep) -> FinancialsOut:
         out.value_display = m.value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         metrics.append(out)
     return FinancialsOut(figures=[FigureOut.model_validate(f) for f in figures], metrics=metrics)
+
+
+@app.post("/documents/{document_id}/ask")
+def ask(
+    document_id: int,
+    body: QuestionIn,
+    session: SessionDep,
+    embedder: Annotated[Embedder, Depends(get_embedder)],
+    model: Annotated[AnswerModel, Depends(get_answer_model)],
+) -> AnswerOut:
+    """Answer from retrieved pages only, citing them; otherwise say there is not enough
+    evidence. Advice and predictions are refused."""
+    if session.get(Document, document_id) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Document not found")
+    try:
+        a = answer_question(session, document_id, body.question, embedder, model)
+    except httpx.HTTPError as error:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "The local AI model is not reachable. Start Ollama and try again.",
+        ) from error
+    return AnswerOut(
+        question=a.question,
+        answer=a.answer,
+        pages=a.pages,
+        abstained=a.abstained,
+        reason=a.reason,
+        model=a.model,
+    )
+
+
+@app.get("/ipos")
+def get_ipos(session: SessionDep) -> list[IpoOut]:
+    """One entry per company: documents, status from the printed bid dates (open, upcoming,
+    closed), price band if any document prints one, and latest-year headline figures."""
+    today = date.today()
+    return [
+        IpoOut.model_validate({**ipo.__dict__, "as_of": today}) for ipo in list_ipos(session, today)
+    ]

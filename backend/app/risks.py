@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
-from app.financials import Word, _lines
+from app.financials import Word, _lines, page_head
 from app.models import Page, PageTable, Risk
 
 CATEGORY_METHOD = "keyword rules v1"
@@ -151,11 +151,11 @@ def headings(pages: list[tuple[int, list[Word]]]) -> list[RiskHeading]:
 
 
 def risk_section(pages: list[Page]) -> list[Page]:
-    start = next((i for i, p in enumerate(pages) if _SECTION_START.search(p.text[:200])), None)
+    start = next((i for i, p in enumerate(pages) if _SECTION_START.search(page_head(p.text))), None)
     if start is None:
         return []
     end = next(
-        (i for i in range(start + 1, len(pages)) if _SECTION_END.search(pages[i].text[:200])),
+        (i for i in range(start + 1, len(pages)) if _SECTION_END.search(page_head(pages[i].text))),
         len(pages),
     )
     return pages[start:end]

@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { AskBox } from "@/components/AskBox";
 import { Citation, Citations } from "@/components/Citation";
 import { Disclaimer } from "@/components/Disclaimer";
 import { type ChartPoint, FinancialsChart } from "@/components/FinancialsChart";
+import { HeadlineFigures, StatusPill, bidWindow, priceBandText } from "@/components/Ipo";
 import { LabelLegend, OutputLabel } from "@/components/OutputLabel";
 import { api, type Figure, type IssueFact, type Metric, type Risk } from "@/lib/api";
 import {
@@ -65,36 +67,95 @@ export default async function IpoPage({ params }: { params: Promise<{ id: string
   } catch {
     notFound();
   }
-  const [financials, issue, risks] = await Promise.all([
+  const [financials, issue, risks, ipos] = await Promise.all([
     api.financials(id),
     api.issue(id),
     api.risks(id),
+    api.ipos(),
   ]);
   const basis = financials.figures[0]?.basis;
+  const ipo = ipos.find((i) => i.documents.some((d) => d.id === id));
+  const window = ipo ? bidWindow(ipo) : null;
+  const others = ipo?.documents.filter((d) => d.id !== id) ?? [];
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8 sm:py-10">
-      <Link href="/" className="text-sm text-sky-700 hover:underline dark:text-sky-300">
-        ← All prospectuses
+    <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
+      <Link href="/" className="text-sm text-accent hover:underline">
+        ← All IPOs
       </Link>
-      <header className="mt-3 flex flex-col gap-3 border-b border-neutral-200 pb-6 dark:border-neutral-800">
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">{document.company}</h1>
-        <p className="text-sm text-neutral-600 dark:text-neutral-400">
-          {document.doc_type}
-          {document.filing_date ? `, dated ${formatDate(document.filing_date)}` : ""} ·{" "}
-          {document.page_count} pages
-          {basis ? ` · Financials: ${basisName(basis)}` : ""}
-        </p>
-        <Disclaimer />
-        <LabelLegend />
+      <header className="mt-6 border-b border-hairline pb-10">
+        <div className="flex flex-wrap items-center gap-3">
+          {ipo && <StatusPill status={ipo.status} />}
+          <span className="text-sm text-muted">
+            {document.doc_type}
+            {document.filing_date ? `, dated ${formatDate(document.filing_date)}` : ""} ·{" "}
+            {document.page_count} pages
+            {basis ? ` · ${basisName(basis)} financials` : ""}
+          </span>
+        </div>
+        <h1 className="mt-3 text-4xl text-ink sm:text-5xl">{document.company}</h1>
+
+        {ipo && (
+          <dl className="mt-6 grid grid-cols-1 gap-4 text-sm sm:grid-cols-3">
+            <div>
+              <dt className="text-xs uppercase tracking-wider text-muted">Bidding</dt>
+              <dd className="mt-1 text-base text-ink">
+                {window ?? "Dates not printed"}
+                {ipo.bid_open && (
+                  <Citation documentId={ipo.bid_open.document_id} page={ipo.bid_open.page_no} />
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs uppercase tracking-wider text-muted">Price band</dt>
+              <dd className="mt-1 text-base text-ink">
+                {priceBandText(ipo.price_band, ipo.status)}
+                {ipo.price_band && (
+                  <Citation documentId={ipo.price_band.document_id} page={ipo.price_band.page_no} />
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-xs uppercase tracking-wider text-muted">Also filed</dt>
+              <dd className="mt-1 text-base text-ink">
+                {others.length === 0
+                  ? "—"
+                  : others.map((d) => (
+                      <span key={d.id} className="mr-2 capitalize">
+                        {d.doc_type}
+                        {d.filing_date ? ` (${formatDate(d.filing_date)})` : ""}
+                      </span>
+                    ))}
+              </dd>
+            </div>
+          </dl>
+        )}
+
+        {ipo && (
+          <div className="mt-10 rounded-2xl border border-hairline bg-card p-6 sm:p-8">
+            <HeadlineFigures ipo={ipo} />
+          </div>
+        )}
+
+        <div className="mt-6 flex flex-col gap-3">
+          <Disclaimer />
+          <LabelLegend />
+        </div>
       </header>
+
+      <Section
+        title="Ask the prospectus"
+        intro="Questions are answered from this document only, with page references."
+      >
+        <AskBox documentId={id} />
+      </Section>
 
       <OfferSection documentId={id} facts={issue} />
       <FinancialsSection documentId={id} figures={financials.figures} />
       <RatiosSection documentId={id} metrics={financials.metrics} />
       <RisksSection documentId={id} risks={risks} />
 
-      <footer className="mt-12 border-t border-neutral-200 pt-6 text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
+      <footer className="mt-12 border-t border-hairline pt-6 text-xs text-muted">
         Every figure links to the PDF page it was read from (p.N = page N in a PDF viewer, which can
         differ from the number printed on the page). Calculated metrics are computed in Python from
         those figures. Nothing on this page predicts listing gains or GMP.
@@ -119,9 +180,9 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="mt-10">
-      <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-      {intro && <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">{intro}</p>}
+    <section className="mt-14">
+      <h2 className="text-2xl text-ink">{title}</h2>
+      {intro && <p className="mt-1 text-sm text-muted">{intro}</p>}
       <div className="mt-4">{children}</div>
     </section>
   );
@@ -148,10 +209,10 @@ function OfferSection({ documentId, facts }: { documentId: number; facts: IssueF
       title="The offer"
       intro="As printed in the prospectus. “[●]” means the document leaves it to be filled in later, usually in a price band addendum."
     >
-      <dl className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-neutral-200 bg-neutral-200 sm:grid-cols-2 lg:grid-cols-3 dark:border-neutral-800 dark:bg-neutral-800">
+      <dl className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-hairline bg-hairline sm:grid-cols-2 lg:grid-cols-3">
         {key.map((fact) => (
-          <div key={fact.field} className="bg-white p-4 dark:bg-neutral-950">
-            <dt className="text-xs uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+          <div key={fact.field} className="bg-card p-4">
+            <dt className="text-xs uppercase tracking-wide text-muted">
               {FIELD_NAMES[fact.field] ?? fact.field}
             </dt>
             <dd className="mt-1 text-base font-medium">
@@ -164,8 +225,8 @@ function OfferSection({ documentId, facts }: { documentId: number; facts: IssueF
 
       {sellers.length > 0 && (
         <div className="mt-6">
-          <h3 className="text-sm font-semibold">Selling shareholders</h3>
-          <ul className="mt-2 divide-y divide-neutral-200 rounded-lg border border-neutral-200 text-sm dark:divide-neutral-800 dark:border-neutral-800">
+          <h3 className="text-base text-ink">Selling shareholders</h3>
+          <ul className="mt-2 divide-y divide-hairline rounded-lg border border-hairline text-sm">
             {sellers.map((s) => (
               <li key={s.label} className="flex flex-wrap justify-between gap-2 px-4 py-2">
                 <span>{s.label}</span>
@@ -181,16 +242,16 @@ function OfferSection({ documentId, facts }: { documentId: number; facts: IssueF
 
       {objects.length > 0 && (
         <div className="mt-6">
-          <h3 className="text-sm font-semibold">Use of proceeds</h3>
-          <div className="mt-2 overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
+          <h3 className="text-base text-ink">Use of proceeds</h3>
+          <div className="mt-2 overflow-x-auto rounded-lg border border-hairline">
             <table className="w-full text-sm">
-              <thead className="bg-neutral-50 text-left text-xs text-neutral-500 dark:bg-neutral-900 dark:text-neutral-400">
+              <thead className="bg-paper text-left text-xs text-muted">
                 <tr>
                   <th className="px-4 py-2 font-medium">Object</th>
                   <th className="px-4 py-2 text-right font-medium">Amount</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
+              <tbody className="divide-y divide-hairline">
                 {objects.map((o) => (
                   <tr key={o.label}>
                     <td className="px-4 py-2">{o.label}</td>
@@ -237,14 +298,14 @@ function FigureTable({
   const unit = figures.find((f) => present.includes(f.metric) && f.unit.startsWith("INR "))?.unit;
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
+    <div className="overflow-x-auto rounded-lg border border-hairline">
       <table className="w-full min-w-[640px] text-sm">
-        <caption className="px-4 pt-3 text-left text-xs text-neutral-500 dark:text-neutral-400">
+        <caption className="px-4 pt-3 text-left text-xs text-muted">
           {caption}
           {unit ? ` (${unitCaption(unit)} unless stated)` : ""}
         </caption>
-        <thead className="text-xs text-neutral-500 dark:text-neutral-400">
-          <tr className="border-b border-neutral-200 dark:border-neutral-800">
+        <thead className="text-xs text-muted">
+          <tr className="border-b border-hairline">
             <th className="px-4 py-2 text-left font-medium">Line item</th>
             {periods.map((p) => (
               <th key={p} className="whitespace-nowrap px-4 py-2 text-right font-medium">
@@ -253,14 +314,12 @@ function FigureTable({
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-neutral-100 dark:divide-neutral-900">
+        <tbody className="divide-y divide-hairline/70">
           {present.map((m) => (
             <tr key={m}>
               <th scope="row" className="px-4 py-2 text-left font-normal">
                 {metricName(m)}
-                {m.startsWith("eps_") && (
-                  <span className="text-xs text-neutral-500"> (₹ per share)</span>
-                )}
+                {m.startsWith("eps_") && <span className="text-xs text-muted"> (₹ per share)</span>}
               </th>
               {periods.map((p) => {
                 const f = cell.get(`${m}|${p}`);
@@ -272,7 +331,7 @@ function FigureTable({
                         <Citation documentId={documentId} page={f.page_no} source={f.source_text} />
                       </>
                     ) : (
-                      <span className="text-neutral-400" title="Not printed in this document">
+                      <span className="text-muted/70" title="Not printed in this document">
                         –
                       </span>
                     )}
@@ -291,7 +350,7 @@ function FinancialsSection({ documentId, figures }: { documentId: number; figure
   if (figures.length === 0) {
     return (
       <Section title="Financials">
-        <p className="text-sm text-neutral-600">No financial statements extracted yet.</p>
+        <p className="text-sm text-muted">No financial statements extracted yet.</p>
       </Section>
     );
   }
@@ -359,7 +418,7 @@ function RatiosSection({ documentId, metrics }: { documentId: number; metrics: M
           caption="Debt and equity, at each date"
         />
       </div>
-      <p className="mt-2 text-xs text-neutral-500 dark:text-neutral-400">
+      <p className="mt-2 text-xs text-muted">
         * Part-year period; not annualised. Page links show where each input was read.
       </p>
       <div className="mt-3">
@@ -383,13 +442,11 @@ function MetricTable({
   const periods = sortPeriods(metrics.map((m) => m.period));
   const cell = new Map(metrics.map((m) => [`${m.metric}|${m.period}`, m]));
   return (
-    <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
+    <div className="overflow-x-auto rounded-lg border border-hairline">
       <table className="w-full min-w-[640px] text-sm">
-        <caption className="px-4 pt-3 text-left text-xs text-neutral-500 dark:text-neutral-400">
-          {caption}
-        </caption>
-        <thead className="text-xs text-neutral-500 dark:text-neutral-400">
-          <tr className="border-b border-neutral-200 dark:border-neutral-800">
+        <caption className="px-4 pt-3 text-left text-xs text-muted">{caption}</caption>
+        <thead className="text-xs text-muted">
+          <tr className="border-b border-hairline">
             <th className="px-4 py-2 text-left font-medium">Metric</th>
             {periods.map((p) => (
               <th key={p} className="whitespace-nowrap px-4 py-2 text-right font-medium">
@@ -398,7 +455,7 @@ function MetricTable({
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-neutral-100 dark:divide-neutral-900">
+        <tbody className="divide-y divide-hairline/70">
           {names.map((name) => {
             const formula = metrics.find((m) => m.metric === name)?.formula;
             return (
@@ -418,7 +475,7 @@ function MetricTable({
                       {m ? (
                         <span title={m.note ?? undefined}>
                           {formatNumber(m.value_display ?? m.value, m.unit)}
-                          {m.note ? <sup className="text-neutral-500">*</sup> : null}
+                          {m.note ? <sup className="text-muted">*</sup> : null}
                           <Citations documentId={documentId} pages={m.input_pages} />
                         </span>
                       ) : null}
@@ -450,7 +507,7 @@ function RisksSection({ documentId, risks }: { documentId: number; risks: Risk[]
           <a
             key={g.category}
             href={`#risk-${g.category}`}
-            className="rounded-full border border-neutral-300 px-3 py-1 hover:bg-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-900"
+            className="rounded-full border border-hairline px-3 py-1 hover:bg-accent-soft"
           >
             {CATEGORY_NAMES[g.category]} · {g.items.length}
           </a>
@@ -459,17 +516,17 @@ function RisksSection({ documentId, risks }: { documentId: number; risks: Risk[]
       <div className="mt-6 flex flex-col gap-8">
         {groups.map((g) => (
           <div key={g.category} id={`risk-${g.category}`}>
-            <h3 className="text-sm font-semibold">
+            <h3 className="text-base text-ink">
               {CATEGORY_NAMES[g.category]}{" "}
-              <span className="font-normal text-neutral-500">({g.items.length})</span>
+              <span className="font-normal text-muted">({g.items.length})</span>
             </h3>
             <ol className="mt-2 flex flex-col gap-2">
               {g.items.map((r) => (
                 <li
                   key={`${r.number}-${r.page_no}`}
-                  className="rounded-lg border border-neutral-200 p-3 text-sm leading-relaxed dark:border-neutral-800"
+                  className="rounded-lg border border-hairline p-3 text-sm leading-relaxed"
                 >
-                  <span className="mr-2 font-mono text-xs text-neutral-500">#{r.number}</span>
+                  <span className="mr-2 font-mono text-xs text-muted">#{r.number}</span>
                   {r.text}
                   <Citation documentId={documentId} page={r.page_no} />
                 </li>

@@ -121,3 +121,44 @@ def test_extract_tells_current_from_non_current_borrowings() -> None:
     got = {(f.metric, f.period.label): f.value for f in figures}
     assert got[("borrowings_non_current", "as at 2026-03-31")] == D("522.89")
     assert got[("borrowings_current", "as at 2026-03-31")] == D("2861.65")
+
+
+def test_stray_leading_number_does_not_hide_a_title() -> None:
+    # BLS Polymers' RHP repeats "24" at the start of every page's text
+    assert statement_type("24 SUMMARY OF RESTATED STATEMENT OF PROFIT AND LOSS (₹ in lakhs)") == (
+        "profit_and_loss"
+    )
+    assert (
+        statement_type("24 SUMMARY OF RESTATED STATEMENT OF CASH FLOW (₹ in lakhs)") == "cash_flow"
+    )
+
+
+def test_loss_wording_is_read_as_negative_profit() -> None:
+    # Acevector RHP page 77: a loss-making company labels the lines "loss"
+    rows: list[list[str | None]] = [
+        ["Restated loss before exceptional items and\ntax (III= I-II)", "(375.55)", "(469.83)"],
+        ["Restated loss before tax (V= III+IV)", "(375.55)", "(1,205.88)"],
+        ["Restated loss for the year (VII= V- VI)", "(455.06)", "(1,263.06)"],
+    ]
+    figures = extract_from_table(rows, "profit_and_loss", PERIODS, "INR million", 77, 0)
+    got = {(f.metric, f.period.label): f.value for f in figures}
+    assert got[("profit_after_tax", "FY2026")] == D("-455.06")
+    # Both lines are kept: profit before tax, and before exceptional items (for EBITDA)
+    assert got[("profit_before_tax", "FY2025")] == D("-1205.88")
+    assert got[("profit_before_exceptional_items_and_tax", "FY2025")] == D("-469.83")
+
+
+def test_titles_with_ampersand_and_mid_page() -> None:
+    # SFC Environmental: "Restated Consolidated Statement of Profit & Loss"
+    assert statement_type("Restated Consolidated Statement of Profit & Loss\n(in ₹ million)") == (
+        "profit_and_loss"
+    )
+    # A title further down the page counts; a cross-reference in a sentence does not
+    page = (
+        "SUMMARY FINANCIAL INFORMATION\nIntro text.\nRestated statement of assets and liabilities\n"
+    )
+    assert statement_type(page) == "balance_sheet"
+    assert (
+        statement_type("Text.\nFor details, see Restated Statement of Profit and Loss on page 91")
+        is None
+    )

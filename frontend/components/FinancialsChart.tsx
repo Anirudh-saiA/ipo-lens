@@ -45,14 +45,14 @@ export function FinancialsChart({ data, unit }: { data: ChartPoint[]; unit: stri
             <Bar
               dataKey="revenue"
               name="Revenue from operations"
-              fill="#0369a1"
+              fill="#0f5c4d"
               radius={[3, 3, 0, 0]}
             />
-            <Bar dataKey="profit" name="Profit after tax" fill="#059669" radius={[3, 3, 0, 0]} />
+            <Bar dataKey="profit" name="Profit after tax" fill="#a8844c" radius={[3, 3, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <figcaption className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+      <figcaption className="mt-1 text-xs text-muted">
         {unit}. Full fiscal years only; part-year periods are in the table below.
       </figcaption>
     </figure>

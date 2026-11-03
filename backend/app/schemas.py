@@ -1,7 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class DocumentOut(BaseModel):
@@ -96,3 +96,52 @@ class MetricOut(BaseModel):
 class FinancialsOut(BaseModel):
     figures: list[FigureOut]
     metrics: list[MetricOut]
+
+
+class QuestionIn(BaseModel):
+    question: str = Field(min_length=3, max_length=500)
+
+
+class AnswerOut(BaseModel):
+    question: str
+    answer: str
+    pages: list[int]
+    abstained: bool
+    reason: str | None
+    model: str | None
+    # AI-written text, grounded in the cited pages; numbers checked against those pages
+    output_label: str = "AI interpretation"
+    disclaimer: str = "Research aid, not investment advice."
+
+
+class CitedOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    value: str
+    unit: str | None
+    document_id: int
+    page_no: int
+    label: str
+    period: str | None = None
+
+
+class DocumentRef(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    doc_type: str
+    filing_date: date | None
+
+
+class IpoOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    company: str
+    primary_document_id: int
+    documents: list[DocumentRef]
+    status: str
+    bid_open: CitedOut | None
+    bid_close: CitedOut | None
+    price_band: CitedOut | None
+    headline: dict[str, CitedOut]
+    as_of: date

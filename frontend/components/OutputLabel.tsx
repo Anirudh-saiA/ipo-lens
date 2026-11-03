@@ -3,14 +3,10 @@ import type { OutputLabel as Label } from "@/lib/api";
 // Hard rule 4: every output says whether it is a document fact, a company claim,
 // a Python calculation or an AI interpretation.
 const STYLES: Record<Label, string> = {
-  "verified fact (from the document)":
-    "bg-emerald-50 text-emerald-800 ring-emerald-200 dark:bg-emerald-950 dark:text-emerald-200 dark:ring-emerald-800",
-  "company claim (disclosed risk factor)":
-    "bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-950 dark:text-amber-200 dark:ring-amber-800",
-  "calculated metric":
-    "bg-sky-50 text-sky-800 ring-sky-200 dark:bg-sky-950 dark:text-sky-200 dark:ring-sky-800",
-  "AI interpretation":
-    "bg-violet-50 text-violet-800 ring-violet-200 dark:bg-violet-950 dark:text-violet-200 dark:ring-violet-800",
+  "verified fact (from the document)": "text-accent ring-accent/25 bg-accent-soft",
+  "company claim (disclosed risk factor)": "text-[#8a5a12] ring-[#8a5a12]/25 bg-[#f7efe1]",
+  "calculated metric": "text-[#2f4a7a] ring-[#2f4a7a]/25 bg-[#eaf0f8]",
+  "AI interpretation": "text-[#6a3f86] ring-[#6a3f86]/25 bg-[#f2ebf7]",
 };
 
 const SHORT: Record<Label, string> = {
@@ -33,8 +29,7 @@ export function OutputLabel({ label }: { label: Label }) {
 
 export function LabelLegend() {
   return (
-    <div className="flex flex-wrap items-center gap-2 text-xs text-neutral-500 dark:text-neutral-400">
-      <span>Labels:</span>
+    <div className="flex flex-wrap items-center gap-2 text-xs text-muted">
       {(Object.keys(STYLES) as Label[]).map((label) => (
         <OutputLabel key={label} label={label} />
       ))}

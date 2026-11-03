@@ -27,9 +27,13 @@ _AMOUNT = re.compile(
 _SHARES = re.compile(r"up\s+to\s*(\[●\]|[\d,]+)\s*equity\s+shares", re.I)
 _FACE_VALUE = re.compile(r"face\s+value\s+(?:of\s+)?₹\s*(\d+(?:\.\d+)?)", re.I)
 _DATE = re.compile(r"\b(" + "|".join(MONTHS) + r")\s*(\d{1,2})\s*,?\s*(20\d\d)", re.I)
+# "Price band of ₹142 to ₹150" or "PRICE BAND: ₹ 142 TO ₹ 150 PER EQUITY SHARE"
 _PRICE_BAND = re.compile(
-    r"price\s+band\s+of\s+₹\s*([\d,]+(?:\.\d+)?)\s*(?:to|-)\s*₹\s*([\d,]+(?:\.\d+)?)", re.I
+    r"price\s+band\s*(?::|of)\s*₹\s*([\d,]+(?:\.\d+)?)\s*(?:to|-|–)\s*₹\s*([\d,]+(?:\.\d+)?)",
+    re.I,
 )
+# "Bids can be made for a minimum of 100 Equity Shares"
+_BID_LOT = re.compile(r"minimum\s+of\s+([\d,]+)\s+equity\s+shares", re.I)
 
 
 @dataclass
@@ -82,6 +86,10 @@ def cover_facts(page_no: int, rows: list[list[str | None]]) -> list[Fact]:
                 [c for c in r if c and c.strip()]
                 for r in rows[index + 1 : index + 6]
                 if len([c for c in r if c and c.strip()]) >= len(header) - 1
+                # a wrapped heading row ("SIZE | SALE SIZE") is not the values row
+                and re.search(
+                    r"up\s+to|aggregat|not\s+applicable", " ".join(c or "" for c in r), re.I
+                )
             ),
             None,
         )
@@ -356,6 +364,20 @@ def extract_issue(session: Session, document_id: int) -> list[IssueFact]:
             )
     if (band := _price_band_fact(front)) is not None:
         facts.append(band)
+    for page in front:
+        if lot := _BID_LOT.search(page.text):
+            facts.append(
+                Fact(
+                    "bid_lot",
+                    page.page_no,
+                    lot.group(1),
+                    _number(lot.group(1)),
+                    "equity shares",
+                    None,
+                    _flat(lot.group(0)),
+                )
+            )
+            break
 
     start = next(
         (

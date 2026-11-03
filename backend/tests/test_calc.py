@@ -166,3 +166,22 @@ def test_second_debt_view_needs_both_deferred_payment_lines() -> None:
     assert results["total_debt_incl_deferred_payments"].value == D("1752947")
     assert results["debt_to_equity_incl_deferred_payments"].value == D("0.5200")
     assert results["debt_to_equity"].value == D("0.2100")  # the borrowings-only view stays
+
+
+def test_roe_refuses_when_equity_was_negative_at_either_end() -> None:
+    # Acevector: equity -1,223.65 at March 2024, 1,884.02 at March 2025, loss 1,263.06
+    with pytest.raises(ZeroDivisionError):
+        calc.return_on_average_equity_pct(D("-1263.06"), D("-1223.65"), D("1884.02"))
+
+
+def test_ebitda_starts_before_exceptional_items_when_printed() -> None:
+    # Acevector FY2025: loss before exceptional items (469.83), exceptional (736.05)
+    figures = _figures(
+        _fig(1, "profit_before_tax", "FY2025", "-1205.88"),
+        _fig(2, "profit_before_exceptional_items_and_tax", "FY2025", "-469.83"),
+        _fig(3, "finance_costs", "FY2025", "16.46"),
+        _fig(4, "depreciation_amortisation", "FY2025", "111.55"),
+    )
+    (result,) = calc.compute_period(figures, "FY2025")
+    assert (result.metric, result.value) == ("ebitda", D("-341.8200"))
+    assert result.formula.startswith("profit_before_exceptional_items_and_tax")

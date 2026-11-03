@@ -4,6 +4,9 @@ python -m app.cli ingest PATH --company NAME --doc-type RHP
 python -m app.cli financials DOCUMENT_ID
 python -m app.cli accuracy DOCUMENT_ID GOLDEN_CSV
 python -m app.cli structure DOCUMENT_ID
+python -m app.cli index DOCUMENT_ID
+python -m app.cli ask DOCUMENT_ID "question"
+python -m app.cli qa-eval EVAL_CSV
 """
 
 import argparse
@@ -13,11 +16,15 @@ from pathlib import Path
 
 from app.accuracy import compare, report
 from app.calc import compute_document
+from app.chunks import index_document
 from app.db import SessionLocal
 from app.financials import extract_document
 from app.ingest import ingest_pdf
 from app.issue import extract_issue
 from app.models import DOC_TYPES
+from app.models_ai import OllamaAnswerModel, OllamaEmbedder
+from app.qa import answer_question
+from app.qa_eval import eval_report, evaluate
 from app.risks import extract_risks
 
 
@@ -46,6 +53,17 @@ def main(argv: list[str] | None = None) -> None:
     )
     structure.add_argument("document_id", type=int)
 
+    index = sub.add_parser("index", help="split pages into chunks and embed them locally")
+    index.add_argument("document_id", type=int)
+
+    ask = sub.add_parser("ask", help="answer a question from the prospectus, with pages")
+    ask.add_argument("document_id", type=int)
+    ask.add_argument("question")
+
+    qa_eval = sub.add_parser("qa-eval", help="run the question set and report results")
+    qa_eval.add_argument("eval_csv", type=Path)
+    qa_eval.add_argument("--out", type=Path, help="write per-question results to this CSV")
+
     args = parser.parse_args(argv)
     started = time.perf_counter()
     with SessionLocal() as session:
@@ -71,6 +89,21 @@ def main(argv: list[str] | None = None) -> None:
             facts = extract_issue(session, args.document_id)
             risks = extract_risks(session, args.document_id)
             print(f"{len(facts)} issue facts, {len(risks)} risk factors")
+        elif args.command == "index":
+            count = index_document(session, args.document_id, OllamaEmbedder())
+            print(f"{count} chunks indexed ({time.perf_counter() - started:.0f}s)")
+        elif args.command == "ask":
+            answer = answer_question(
+                session, args.document_id, args.question, OllamaEmbedder(), OllamaAnswerModel()
+            )
+            pages = ", ".join(f"p.{p}" for p in answer.pages) or "-"
+            print(answer.answer)
+            print(f"[{answer.output_label}; pages: {pages}]")
+            if answer.reason:
+                print(f"(abstained: {answer.reason})")
+        elif args.command == "qa-eval":
+            results = evaluate(session, args.eval_csv, OllamaEmbedder(), OllamaAnswerModel())
+            print(eval_report(results, args.out))
         else:
             print(report(compare(session, args.document_id, args.golden_csv)))
 
