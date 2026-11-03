@@ -1,3 +1,4 @@
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Response, status
@@ -7,8 +8,25 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.db import engine, get_session
-from app.models import Document, IssueFact, Page, PageTable, Risk
-from app.schemas import DocumentOut, IssueFactOut, PageOut, RiskOut, TableOut
+from app.models import (
+    CalculatedMetric,
+    Document,
+    ExtractedFigure,
+    IssueFact,
+    Page,
+    PageTable,
+    Risk,
+)
+from app.schemas import (
+    DocumentOut,
+    FigureOut,
+    FinancialsOut,
+    IssueFactOut,
+    MetricOut,
+    PageOut,
+    RiskOut,
+    TableOut,
+)
 
 SessionDep = Annotated[Session, Depends(get_session)]
 
@@ -88,3 +106,28 @@ def get_risks(document_id: int, session: SessionDep) -> list[RiskOut]:
         select(Risk).where(Risk.document_id == document_id).order_by(Risk.number, Risk.id)
     )
     return [RiskOut.model_validate(r) for r in risks]
+
+
+@app.get("/documents/{document_id}/financials")
+def get_financials(document_id: int, session: SessionDep) -> FinancialsOut:
+    """Reported figures (each with its page) and Python-calculated metrics (each with its
+    formula and the pages of the figures it was computed from)."""
+    figures = list(
+        session.scalars(
+            select(ExtractedFigure)
+            .where(ExtractedFigure.document_id == document_id)
+            .order_by(ExtractedFigure.page_no, ExtractedFigure.id)
+        )
+    )
+    pages = {f.id: f.page_no for f in figures}
+    metrics = []
+    for m in session.scalars(
+        select(CalculatedMetric)
+        .where(CalculatedMetric.document_id == document_id)
+        .order_by(CalculatedMetric.metric, CalculatedMetric.period)
+    ):
+        out = MetricOut.model_validate(m)
+        out.input_pages = sorted({pages[i] for i in m.input_figure_ids if i in pages})
+        out.value_display = m.value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        metrics.append(out)
+    return FinancialsOut(figures=[FigureOut.model_validate(f) for f in figures], metrics=metrics)

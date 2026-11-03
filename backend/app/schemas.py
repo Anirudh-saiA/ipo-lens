@@ -57,3 +57,42 @@ class RiskOut(BaseModel):
     category: str
     category_method: str | None
     output_label: str = "company claim (disclosed risk factor)"
+
+
+class FigureOut(BaseModel):
+    """A number as reported in the document."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    metric: str
+    period: str
+    basis: str
+    value: Decimal
+    unit: str
+    page_no: int
+    source_text: str
+    output_label: str = "verified fact (from the document)"
+
+
+class MetricOut(BaseModel):
+    """A number calculated in Python from reported figures."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    metric: str
+    period: str
+    value: Decimal
+    unit: str
+    formula: str
+    note: str | None
+    input_figure_ids: list[int]
+    input_pages: list[int] = []
+    # Rounded half-up to 2 places in Python, for display; value keeps full precision
+    value_display: Decimal | None = None
+    output_label: str = "calculated metric"
+
+
+class FinancialsOut(BaseModel):
+    figures: list[FigureOut]
+    metrics: list[MetricOut]

@@ -114,3 +114,13 @@ Not covered: a loss-making company; EBITDA golden values exist for BCSSL only; i
 - Checked by Claude from the PDF pages rendered as images, at the owner's request, instead of owner screenshots. This is independent of the text extraction being tested, but it is not a human check.
 - Risk categories: 1 of 2 checked is right. Fusion #4 (revenue concentration outside India) is labelled "legal". Keyword categories stay an open weakness.
 - **Contradiction found in the Fusion CX RHP:** FY2026 revenue from operations is ₹18,182.38 million in the revenue-by-geography table (PDF page 29) and ₹18,181.38 million in the restated profit and loss (PDF page 67). To be shown as a contradiction (hard rule 5), not resolved.
+
+## Prospectus web page, built before milestone 4 (2026-11-04)
+
+- **Added to the plan by the owner's choice:** one page per prospectus showing data already extracted, so the work can be checked in a browser. It does not change the brief's feature order; the open IPO dashboard is still milestone 5.
+- **Pages:** `/` lists ingested prospectuses; `/ipo/[id]` shows the offer, selling shareholders, use of proceeds, financial statements with a revenue/PAT chart (Recharts, MIT), calculated metrics split into "for each period" and "at each date", and risk factors grouped by keyword category.
+- **Citations:** every value links to its PDF page (`p.N`), opening the stored page text from the API. Calculated metrics link to the pages of all their inputs. Output labels from hard rule 4 appear on every section, and the "research aid, not investment advice" notice is at the top.
+- **No arithmetic in the browser.** Ratios are rounded half-up to 2 places in Python (`value_display`, `/documents/{id}/financials`); the browser only formats digits. A first version truncated in JavaScript (29.8483% showed as 29.84%), which is why this moved to the backend.
+- **Server-rendered on every request** (`force-dynamic`), so the build does not need the API, and the page always shows the latest extraction. If the API is down, the home page says "Data unavailable".
+- **Known dev-only warning:** `npm run dev` logs a React hydration warning on the risk list; the production build (`next build` + `next start`) has no console errors. Not investigated further.
+- Jio Platforms' filing date was missing (not passed at ingest); set to 2026-10-14 from its cover page.

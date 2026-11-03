@@ -78,7 +78,22 @@ npm install
 npm run dev
 ```
 
-Open <http://localhost:3000>.
+Open <http://localhost:3000>. The home page lists ingested prospectuses; each opens a page
+with the offer, use of proceeds, financials (with a chart), calculated metrics and risk
+factors. Every value links to the PDF page it came from.
+
+The site reads the API at `http://localhost:8000` by default. If ports 8000 or 3000 are
+taken (on the development machine they are), run the API with `--port 8010`, run the site
+with `npm run dev -- --port 3010`, and create `frontend\.env.local` (git-ignored):
+
+```
+API_URL=http://localhost:8010
+NEXT_PUBLIC_API_URL=http://localhost:8010
+```
+
+Do not run `npm run build` while `npm run dev` is running: both use the `.next` folder, and
+the dev server breaks. To serve a production build, stop the dev server, then
+`npm run build` and `npx next start`.
 
 ## Ingesting a prospectus
 
