@@ -235,7 +235,8 @@ def answer_from_data(session: Session, document_id: int, question: str) -> FactA
         )
     by_period: dict[str, ExtractedFigure | CalculatedMetric] = {}
     for r in sorted(rows, key=lambda r: getattr(r, "page_no", 0)):
-        by_period.setdefault(str(getattr(r, "period")), r)  # noqa: B009
+        assert isinstance(r, ExtractedFigure | CalculatedMetric)
+        by_period.setdefault(r.period, r)
     if flow or as_at:
         row = by_period.get(flow or "") or by_period.get(as_at or "")
         if row is None:

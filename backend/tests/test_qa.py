@@ -112,19 +112,19 @@ def indexed(db_session: Session) -> int:
 
 @pytest.mark.db
 def test_grounded_answer_is_returned_with_its_pages(db_session: Session, indexed: int) -> None:
-    model = ScriptedModel(
-        {"answer": "Revenue from operations was ₹12,668.18 million.", "pages": [91]}
-    )
+    model = ScriptedModel({"answer": "It depends on JSW Steel Coated Products.", "pages": [36]})
     a = answer_question(
-        db_session, indexed, "Revenue from operations in Fiscal 2026?", FakeEmbedder(), model
+        db_session, indexed, "Which supplier does the company depend on?", FakeEmbedder(), model
     )
-    assert (a.abstained, a.pages, a.output_label) == (False, [91], "AI interpretation")
+    assert (a.abstained, a.pages, a.output_label) == (False, [36], "AI interpretation")
 
 
 @pytest.mark.db
 def test_invented_number_becomes_a_refusal(db_session: Session, indexed: int) -> None:
     model = ScriptedModel({"answer": "Revenue grew 14% to ₹12,668.18 million.", "pages": [91]})
-    a = answer_question(db_session, indexed, "How fast did revenue grow?", FakeEmbedder(), model)
+    a = answer_question(
+        db_session, indexed, "Why is the company expanding so fast?", FakeEmbedder(), model
+    )
     assert (a.abstained, a.answer) == (True, NOT_ENOUGH)
     assert a.reason == "answer contains a number not printed on the cited pages"
 
