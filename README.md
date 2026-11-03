@@ -101,7 +101,7 @@ From `backend/` with the venv active:
 
 ```powershell
 python -m app.cli financials 1
-python -m app.cli accuracy 1 ..\data\goldencssl_RHP_2026_golden.csv
+python -m app.cli accuracy 1 ..\data\golden\bcssl_RHP_2026_golden.csv
 ```
 
 The first command extracts reported figures from the restated statements (each with its
