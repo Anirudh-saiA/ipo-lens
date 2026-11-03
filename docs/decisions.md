@@ -62,3 +62,14 @@ Started with the BCSSL RHP only, by choice; the gate needs 3 to 5 prospectuses, 
   rule 5, the product must show this as a contradiction in the document, not pick one silently.
 - PDF page numbers and printed page numbers differ (137 vs 131 here). Citations use the PDF
   page; showing the printed number too would help users find it in a paper copy.
+
+## Milestone 2: second prospectus, Jio Platforms RHP (2026-11-03)
+
+- **Statements drawn without ruling lines.** Jio's summary statements (PDF pages 75 to 77) have no table lines, so table extraction finds nothing. Ingest now also stores each word's position on the page (`pages.words`, migration 0004; older documents are backfilled by re-running `ingest`).
+- **Second extractor, `statement-words v1`:** rebuilds value columns from the right edges of numbers, assigns each header date to the column it sits over, and joins labels that wrap around their numbers. It runs only on statement pages where the table method found nothing, so BCSSL results are unchanged.
+- **A bare year in a header is a fiscal year only if the header says "Fiscal"** (fiscal year = year ended 31 March). Otherwise the page is skipped, not guessed.
+- **"Summary of restated ... statement" titles count as statements** (the summary in "Summary Financial Information" is derived from the restated statements; the full statements later in the RHP are in a different layout and are not read yet).
+- **PAT is "Profit for the period/year"** (after share of associates and joint ventures) when printed, ahead of an earlier "Profit After Tax" line.
+- **Total equity, when not printed,** is calculated in Python as share capital + other equity + non-controlling interest and stored as a calculated metric with its inputs. ROE and RoNW for consolidated companies therefore use profit and equity including non-controlling interest; owners-only versions are a later improvement.
+- **Total debt is borrowings only.** For Jio this leaves out large deferred payment liabilities for spectrum (about ₹1.05 trillion at 31 March 2026) and lease liabilities. The debt-to-equity of 0.21 must be shown with that caveat, or with a second "debt including deferred payment liabilities" metric. Not decided yet.
+- **Money results take the unit of their inputs** (million, lakh, crore), not a fixed "INR million".

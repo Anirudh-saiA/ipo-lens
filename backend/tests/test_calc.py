@@ -109,3 +109,33 @@ def test_roe_needs_opening_equity() -> None:
     metrics = {r.metric for r in calc.compute_period(figures, "FY2024")}
     assert "return_on_equity_pct" not in metrics  # March 2023 equity is not in the RHP
     assert "return_on_net_worth_pct" in metrics
+
+
+def test_equity_is_summed_from_parts_when_no_total_is_printed() -> None:
+    # Jio Platforms RHP page 75 prints share capital, other equity and NCI but no total
+    figures = _figures(
+        _fig(1, "profit_after_tax", "FY2026", "300491"),
+        _fig(2, "equity_share_capital", "as at 2026-03-31", "89390"),
+        _fig(3, "other_equity", "as at 2026-03-31", "3270379"),
+        _fig(4, "non_controlling_interest", "as at 2026-03-31", "10993"),
+    )
+    results = {r.metric: r for r in calc.compute_period(figures, "FY2026")}
+    assert results["total_equity"].value == D("3370762")
+    assert results["total_equity"].period == "as at 2026-03-31"
+    assert [f.id for f in results["return_on_net_worth_pct"].inputs] == [1, 2, 3, 4]
+
+
+def test_money_results_keep_the_input_unit() -> None:
+    figures = _figures(
+        ExtractedFigure(
+            id=1, metric="profit_before_tax", period="FY2026", value=D("10"), unit="INR lakh"
+        ),
+        ExtractedFigure(
+            id=2, metric="finance_costs", period="FY2026", value=D("2"), unit="INR lakh"
+        ),
+        ExtractedFigure(
+            id=3, metric="depreciation_amortisation", period="FY2026", value=D("3"), unit="INR lakh"
+        ),
+    )
+    (result,) = calc.compute_period(figures, "FY2026")
+    assert (result.metric, result.value, result.unit) == ("ebitda", D("15"), "INR lakh")

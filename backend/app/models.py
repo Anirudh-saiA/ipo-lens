@@ -62,6 +62,8 @@ class Page(Base):
     document_id: Mapped[int] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"))
     page_no: Mapped[int] = mapped_column(Integer)
     text: Mapped[str] = mapped_column(Text)
+    # [[text, x0, x1, top], ...] in PDF points; null for pages stored before positions were kept
+    words: Mapped[list[list[str | float]] | None] = mapped_column(JSONB)
 
 
 class PageTable(Base):

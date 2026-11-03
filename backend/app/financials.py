@@ -3,13 +3,18 @@
 Reads only what the document prints: every figure keeps its page, the label and the
 row text it came from. Nothing is calculated here (see app/calc.py for that).
 
-Column positions in extracted tables are unreliable (headers and values are often
-offset), so periods come from the dates in the page header, and a row is used only
-when it has exactly one value slot per period.
+Two ways to read a statement page, both feeding the same row matcher:
+- tables: for statements drawn with ruling lines. Column positions in extracted tables
+  are unreliable, so periods come from the dates in the page header and a row is used
+  only when it has exactly one value per period.
+- words: for statements drawn without lines. Columns are rebuilt from the x positions of
+  the numbers, and each date in the header is assigned to the column it sits above.
+The words method runs only on pages where the tables method found nothing.
 """
 
 import calendar
 import re
+from collections import Counter
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal, InvalidOperation
@@ -20,84 +25,84 @@ from sqlalchemy.orm import Session
 from app.models import Document, ExtractedFigure, Page, PageTable
 
 METHOD = "statement-rows v1"
+WORDS_METHOD = "statement-words v1"
 
+_TITLE_PREFIX = r"^\s*(summary of )?restated (consolidated |standalone )?"
 STATEMENT_TITLES = {
-    "profit_and_loss": re.compile(
-        r"^\s*restated (consolidated |standalone )?statement of profit and loss", re.I
-    ),
-    "balance_sheet": re.compile(
-        r"^\s*restated (consolidated |standalone )?statement of assets and liabilities", re.I
-    ),
+    "profit_and_loss": re.compile(_TITLE_PREFIX + r"statement of profit and loss", re.I),
+    "balance_sheet": re.compile(_TITLE_PREFIX + r"statement of assets and liabilities", re.I),
     "cash_flow": re.compile(
-        r"^\s*restated (consolidated |standalone )?(cash flow statement|statement of cash flows)",
-        re.I,
+        _TITLE_PREFIX + r"(cash flow statement|statement of cash flows?)", re.I
     ),
 }
 
-# (metric, statement, label pattern, balance-sheet section or None, unit override)
+
+@dataclass(frozen=True)
+class MetricRule:
+    metric: str
+    statement: str
+    pattern: re.Pattern[str]
+    section: str | None = None  # balance-sheet section the row must sit in
+    unit: str | None = None  # overrides the page unit (per-share values)
+
+
 # Labels are matched after normalising: lower case, spaces collapsed, list markers removed.
-METRICS: list[tuple[str, str, re.Pattern[str], str | None, str | None]] = [
-    (
-        "revenue_from_operations",
-        "profit_and_loss",
-        re.compile(r"^revenue from operations$"),
-        None,
-        None,
+# Order matters: where two rules give the same metric, the earlier rule wins, wherever
+# its row appears on the page (e.g. "profit for the year" beats "profit after tax",
+# which in consolidated statements comes before the share of associates).
+METRICS: list[MetricRule] = [
+    MetricRule(
+        "revenue_from_operations", "profit_and_loss", re.compile(r"^revenue from operations$")
     ),
-    ("other_income", "profit_and_loss", re.compile(r"^other income$"), None, None),
-    ("total_income", "profit_and_loss", re.compile(r"^total income\b"), None, None),
-    ("finance_costs", "profit_and_loss", re.compile(r"^finance costs?$"), None, None),
-    (
+    MetricRule("other_income", "profit_and_loss", re.compile(r"^other income$")),
+    MetricRule("total_income", "profit_and_loss", re.compile(r"^total income\b")),
+    MetricRule("finance_costs", "profit_and_loss", re.compile(r"^finance costs?$")),
+    MetricRule(
         "depreciation_amortisation",
         "profit_and_loss",
-        re.compile(r"^depreciation and amorti[sz]ation( expense)?$"),
-        None,
-        None,
+        re.compile(r"^depreciation and amorti[sz]ation( expenses?)?$"),
     ),
-    ("profit_before_tax", "profit_and_loss", re.compile(r"^profit before tax\b"), None, None),
-    ("total_tax_expense", "profit_and_loss", re.compile(r"^total tax expense\b"), None, None),
-    (
+    MetricRule(
+        "profit_before_tax", "profit_and_loss", re.compile(r"^profit before (tax|share of)")
+    ),
+    MetricRule("total_tax_expense", "profit_and_loss", re.compile(r"^total tax expenses?\b")),
+    MetricRule(
         "profit_after_tax",
         "profit_and_loss",
-        re.compile(r"^(restated )?profit (after tax|for the (period|year))"),
-        None,
-        None,
+        re.compile(r"^(restated )?(net )?profit(/\s?\(loss\))? for the (period|year)"),
     ),
-    ("eps_basic", "profit_and_loss", re.compile(r"^basic\b"), None, "INR per share"),
-    ("eps_diluted", "profit_and_loss", re.compile(r"^diluted\b"), None, "INR per share"),
-    ("equity_share_capital", "balance_sheet", re.compile(r"^equity share capital$"), None, None),
-    ("total_equity", "balance_sheet", re.compile(r"^total equity\b(?!.*liabilities)"), None, None),
-    (
+    MetricRule("profit_after_tax", "profit_and_loss", re.compile(r"^(restated )?profit after tax")),
+    MetricRule("eps_basic", "profit_and_loss", re.compile(r"^basic\b"), unit="INR per share"),
+    MetricRule("eps_diluted", "profit_and_loss", re.compile(r"^diluted\b"), unit="INR per share"),
+    MetricRule("equity_share_capital", "balance_sheet", re.compile(r"^equity share capital$")),
+    MetricRule("other_equity", "balance_sheet", re.compile(r"^other equity$")),
+    MetricRule(
+        "non_controlling_interest", "balance_sheet", re.compile(r"^non[- ]controlling interests?$")
+    ),
+    MetricRule("total_equity", "balance_sheet", re.compile(r"^total equity\b(?!.*liabilities)")),
+    MetricRule(
         "borrowings_non_current",
         "balance_sheet",
         re.compile(r"^borrowings$"),
-        "non_current_liabilities",
-        None,
+        section="non_current_liabilities",
     ),
-    (
+    MetricRule(
         "borrowings_current",
         "balance_sheet",
         re.compile(r"^borrowings$"),
-        "current_liabilities",
-        None,
+        section="current_liabilities",
     ),
-    (
-        "cash_and_cash_equivalents",
-        "balance_sheet",
-        re.compile(r"^cash and cash equivalents$"),
-        None,
-        None,
+    MetricRule(
+        "cash_and_cash_equivalents", "balance_sheet", re.compile(r"^cash and cash equivalents$")
     ),
-    ("total_assets", "balance_sheet", re.compile(r"^total assets\b"), None, None),
-    (
+    MetricRule("total_assets", "balance_sheet", re.compile(r"^total assets\b")),
+    MetricRule(
         "net_cash_from_operating_activities",
         "cash_flow",
         re.compile(
-            r"^net cash (from|generated from|\(used in\)/generated from"
+            r"^net cash (flow )?(from|generated from|\(used in\)/generated from"
             r"|generated from/\(used in\)) operating activities"
         ),
-        None,
-        None,
     ),
 ]
 
@@ -125,7 +130,8 @@ _MONTH_RE = re.compile(r"\b(" + "|".join(MONTHS) + r")\b(?:\s*,?\s*(\d)\s?(\d))?
 _YEAR_RE = re.compile(r"\b(20\d\d)\b")
 _UNIT_RE = re.compile(r"(₹|rs\.?|inr|rupees)\s*(in\s+)?(million|lakhs?|crores?)", re.I)
 _DASH = re.compile(r"^-+$|^—$|^nil$", re.I)
-_NUMBER = re.compile(r"^\(?-?[\d,]+(\.\d+)?\)?%?$")
+# "8.69*": an asterisk marks a footnote such as "not annualised"
+_NUMBER = re.compile(r"^\(?-?[\d,]+(\.\d+)?\)?%?\*?$")
 
 
 @dataclass(frozen=True)
@@ -151,6 +157,17 @@ class Figure:
     page_no: int
     table_ref: str
     source_text: str
+    method: str = METHOD
+
+
+@dataclass
+class Row:
+    """One line of a statement: its label and its value cells, before any matching."""
+
+    label: str  # normalised
+    slots: list[str]  # value cells in column order; empty for heading rows
+    source_text: str
+    ref: str
 
 
 def rejoin_split_capitals(text: str) -> str:
@@ -170,6 +187,7 @@ def parse_number(cell: str) -> Decimal | None:
     text = re.sub(r"\s+", "", cell)
     if not text or _DASH.match(text) or not _NUMBER.match(text):
         return None
+    text = text.rstrip("*")
     negative = text.startswith("(") and text.endswith(")") or text.startswith("-")
     digits = text.strip("()%-").replace(",", "")
     try:
@@ -186,6 +204,16 @@ def _is_value_slot(cell: str | None) -> bool:
     return bool(text) and bool(_DASH.match(text) or _NUMBER.match(text))
 
 
+def _period(year: int, month: int, day: int | None, statement: str) -> Period:
+    # Where the day is printed away from the month, use month end: restated
+    # periods in Indian prospectuses end on the last day of a month
+    end = date(year, month, day or calendar.monthrange(year, month)[1])
+    if statement == "balance_sheet":
+        return Period(end, 0)
+    # Indian fiscal year ends 31 March; shorter periods run from 1 April
+    return Period(end, 12 if month == 3 else (month - 3) % 12)
+
+
 def find_periods(header_text: str, statement: str) -> list[Period]:
     """Periods in header order. Months and years are paired by position, which copes
     with headers split over lines ('March 31, March 31,' ... '2026 2025')."""
@@ -197,18 +225,10 @@ def find_periods(header_text: str, statement: str) -> list[Period]:
     years = [int(y) for y in _YEAR_RE.findall(header_text)]
     if not months or len(months) != len(years):
         return []
-    periods = []
-    for (month_name, day), year in zip(months, years, strict=True):
-        month = MONTHS[month_name]
-        # Where the day is printed away from the month, use month end: restated
-        # periods in Indian prospectuses end on the last day of a month
-        end = date(year, month, int(day) if day else calendar.monthrange(year, month)[1])
-        if statement == "balance_sheet":
-            periods.append(Period(end, 0))
-        else:
-            # Indian fiscal year ends 31 March; shorter periods run from 1 April
-            periods.append(Period(end, 12 if month == 3 else (month - 3) % 12))
-    return periods
+    return [
+        _period(year, MONTHS[name], int(day) if day else None, statement)
+        for (name, day), year in zip(months, years, strict=True)
+    ]
 
 
 def find_unit(page_text: str) -> str | None:
@@ -243,6 +263,64 @@ def _section(label: str, current: str | None) -> str | None:
     return current
 
 
+def match_rows(
+    rows: list[Row], statement: str, periods: list[Period], unit: str, page_no: int, method: str
+) -> list[Figure]:
+    """Turn statement rows into figures. A row is used only if it has one value per period."""
+    best: dict[tuple[str, Period], tuple[int, Figure]] = {}
+    section: str | None = None
+    for row in rows:
+        section = _section(row.label, section)
+        if len(row.slots) != len(periods):
+            continue
+        for priority, rule in enumerate(METRICS):
+            if rule.statement != statement or not rule.pattern.search(row.label):
+                continue
+            if rule.section is not None and section != rule.section:
+                continue
+            for period, slot in zip(periods, row.slots, strict=True):
+                value = parse_number(slot)
+                key = (rule.metric, period)
+                if value is None or (key in best and best[key][0] <= priority):
+                    continue
+                best[key] = (
+                    priority,
+                    Figure(
+                        metric=rule.metric,
+                        period=period,
+                        value=value,
+                        unit=rule.unit or unit,
+                        page_no=page_no,
+                        table_ref=row.ref,
+                        source_text=row.source_text,
+                        method=method,
+                    ),
+                )
+            break
+    return [figure for _, figure in best.values()]
+
+
+# --- reading rows from ruled tables ---------------------------------------------
+
+
+def rows_from_table(rows: list[list[str | None]], page_no: int, table_index: int) -> list[Row]:
+    out = []
+    for row_index, cells in enumerate(rows):
+        label_cell = next((c for c in cells if c and _is_label(c)), None)
+        if label_cell is None:
+            continue
+        after_label = cells[cells.index(label_cell) + 1 :]
+        out.append(
+            Row(
+                label=normalise_label(label_cell),
+                slots=[c for c in after_label if c is not None and _is_value_slot(c)],
+                source_text=" | ".join(c for c in cells if c).replace("\n", " "),
+                ref=f"page {page_no} table {table_index} row {row_index}",
+            )
+        )
+    return out
+
+
 def extract_from_table(
     rows: list[list[str | None]],
     statement: str,
@@ -251,42 +329,170 @@ def extract_from_table(
     page_no: int,
     table_index: int,
 ) -> list[Figure]:
-    figures: list[Figure] = []
-    seen: set[tuple[str, Period]] = set()
-    section: str | None = None
-    for row_index, row in enumerate(rows):
-        label_cell = next((c for c in row if c and _is_label(c)), None)
-        if label_cell is None:
-            continue
-        label = normalise_label(label_cell)
-        section = _section(label, section)
-        after_label = row[row.index(label_cell) + 1 :]
-        slots = [c for c in after_label if _is_value_slot(c)]
-        if len(slots) != len(periods):
-            continue
-        for metric, metric_statement, pattern, required_section, unit_override in METRICS:
-            if metric_statement != statement or not pattern.search(label):
+    return match_rows(
+        rows_from_table(rows, page_no, table_index), statement, periods, unit, page_no, METHOD
+    )
+
+
+# --- reading rows from word positions --------------------------------------------
+
+Word = list[str | float]  # [text, x0, x1, top]
+
+
+def _lines(words: list[Word], tolerance: float = 3.0) -> list[list[Word]]:
+    lines: list[list[Word]] = []
+    for word in sorted(words, key=lambda w: (float(w[3]), float(w[1]))):
+        if lines and abs(float(lines[-1][0][3]) - float(word[3])) <= tolerance:
+            lines[-1].append(word)
+        else:
+            lines.append([word])
+    return [sorted(line, key=lambda w: float(w[1])) for line in lines]
+
+
+def _split_line(line: list[Word]) -> tuple[list[Word], list[Word]] | None:
+    """Label words then value words. None if text follows a value (a prose line)."""
+    label: list[Word] = []
+    values: list[Word] = []
+    for word in line:
+        if _is_value_slot(str(word[0])):
+            values.append(word)
+        elif values:
+            return None
+        else:
+            label.append(word)
+    return label, values
+
+
+def _columns(lines: list[list[Word]]) -> list[tuple[float, float]] | None:
+    """Value columns as (left, right) spans, from lines carrying the most common number of
+    values. Numbers are right-aligned, so their right edges line up per column."""
+    splits = [s for s in (_split_line(line) for line in lines) if s and len(s[1]) >= 2]
+    if not splits:
+        return None
+    width = Counter(len(values) for _, values in splits).most_common(1)[0][0]
+    full = [values for _, values in splits if len(values) == width]
+    spans = []
+    for i in range(width):
+        lefts = [float(v[i][1]) for v in full]
+        rights = [float(v[i][2]) for v in full]
+        spans.append((min(lefts), max(rights)))
+    if any(spans[i][1] >= spans[i + 1][0] + 5 for i in range(width - 1)):
+        return None  # columns overlap: positions are not consistent enough to trust
+    return spans
+
+
+def _column_of(word: Word, spans: list[tuple[float, float]], slack: float = 12.0) -> int | None:
+    """Column a word sits in: overlapping span first, else the nearest span within slack."""
+    x0, x1 = float(word[1]), float(word[2])
+    overlaps = [min(x1, r) - max(x0, left) for left, r in spans]
+    best = max(range(len(spans)), key=lambda i: overlaps[i])
+    if overlaps[best] > 0:
+        return best
+    gaps = [max(left - x1, x0 - r) for left, r in spans]
+    nearest = min(range(len(spans)), key=lambda i: gaps[i])
+    return nearest if gaps[nearest] <= slack else None
+
+
+def periods_from_header(
+    header: list[list[Word]], spans: list[tuple[float, float]], statement: str
+) -> list[Period]:
+    """Assign each month, day and year in the header to the column it sits over."""
+    months: list[int | None] = [None] * len(spans)
+    days: list[int | None] = [None] * len(spans)
+    years: list[int | None] = [None] * len(spans)
+    fiscal = False
+    for line in header:
+        for word in line:
+            text = rejoin_split_capitals(str(word[0])).strip(",. ").lower()
+            if text == "fiscal":
+                fiscal = True
                 continue
-            if required_section is not None and section != required_section:
+            column = _column_of(word, spans)
+            if column is None:
                 continue
-            for period, slot in zip(periods, slots, strict=True):
-                value = parse_number(slot or "")
-                if value is None or (metric, period) in seen:
-                    continue
-                seen.add((metric, period))
-                figures.append(
-                    Figure(
-                        metric=metric,
-                        period=period,
-                        value=value,
-                        unit=unit_override or unit,
-                        page_no=page_no,
-                        table_ref=f"page {page_no} table {table_index} row {row_index}",
-                        source_text=" | ".join(c for c in row if c).replace("\n", " "),
-                    )
+            if text in MONTHS:
+                months[column] = MONTHS[text]
+            elif re.fullmatch(r"20\d\d", text):
+                years[column] = int(text)
+            elif re.fullmatch(r"[0-3]?\d", text):
+                days[column] = int(text)
+    periods = []
+    for month, day, year in zip(months, days, years, strict=True):
+        if year is None:
+            return []
+        if month is None:
+            if not fiscal:
+                return []  # a bare year is ambiguous unless the header says "Fiscal"
+            month, day = 3, 31  # "Fiscal 2026" = year ended 31 March 2026
+        periods.append(_period(year, month, day, statement))
+    return periods
+
+
+def extract_from_words(words: list[Word], statement: str, unit: str, page_no: int) -> list[Figure]:
+    lines = _lines(words)
+    spans = _columns(lines)
+    if spans is None:
+        return []
+    first_data = next(
+        (
+            i
+            for i, line in enumerate(lines)
+            if (s := _split_line(line)) and s[0] and len(s[1]) == len(spans)
+        ),
+        None,
+    )
+    if first_data is None:
+        return []
+    periods = periods_from_header(lines[:first_data], spans, statement)
+    if not periods:
+        return []
+
+    rows: list[Row] = []
+    pending: list[Word] = []  # a label line whose values sit on the next line
+    for index, line in enumerate(lines[first_data:], start=first_data):
+        split = _split_line(line)
+        if split is None:
+            pending = []
+            continue
+        label_words, values = split
+        if not values:
+            pending = label_words
+            rows.append(
+                Row(
+                    normalise_label(_join(label_words)),
+                    [],
+                    _join(line),
+                    f"page {page_no} line {index}",
                 )
-            break
-    return figures
+            )
+            continue
+        if not label_words:
+            label_words, pending = pending, []
+        slots: list[str | None] = [None] * len(spans)
+        for value in values:
+            column = _column_of(value, spans)
+            if column is None or slots[column] is not None:
+                slots = []
+                break
+            slots[column] = str(value[0])
+        rows.append(
+            Row(
+                label=normalise_label(_join(label_words)),
+                slots=[s for s in slots if s is not None]
+                if all(s is not None for s in slots)
+                else [],
+                source_text=_join(label_words + values),
+                ref=f"page {page_no} line {index}",
+            )
+        )
+    return match_rows(rows, statement, periods, unit, page_no, WORDS_METHOD)
+
+
+def _join(words: list[Word]) -> str:
+    return " ".join(str(w[0]) for w in words)
+
+
+# --- document level ----------------------------------------------------------------
 
 
 def detect_basis(session: Session, document_id: int) -> str:
@@ -305,8 +511,41 @@ def detect_basis(session: Session, document_id: int) -> str:
     return "standalone" if has_standalone else "other"
 
 
+def _from_tables(session: Session, page: Page, statement: str, unit: str) -> list[Figure]:
+    figures: list[Figure] = []
+    tables = session.scalars(
+        select(PageTable)
+        .where(PageTable.document_id == page.document_id, PageTable.page_no == page.page_no)
+        .order_by(PageTable.table_index)
+    )
+    for table in tables:
+        # Header = page text before the table's first data row
+        first_label = next(
+            (
+                normalise_label(c)
+                for r in table.rows
+                for c in r
+                if c
+                and parse_number(c) is None
+                and re.search(r"[a-z]{3}", c.lower())
+                and any(_is_value_slot(x) for x in r)
+            ),
+            None,
+        )
+        header = page.text
+        if first_label:
+            cut = page.text.lower().find(first_label[:20])
+            header = page.text[:cut] if cut > 0 else page.text
+        periods = find_periods(header, statement)
+        if periods:
+            figures += extract_from_table(
+                table.rows, statement, periods, unit, page.page_no, table.table_index
+            )
+    return figures
+
+
 def extract_document(session: Session, document_id: int) -> list[ExtractedFigure]:
-    """Replace this method's figures for one document with a fresh extraction."""
+    """Replace this module's figures for one document with a fresh extraction."""
     document = session.get(Document, document_id)
     if document is None:
         raise ValueError(f"No document {document_id}")
@@ -314,7 +553,8 @@ def extract_document(session: Session, document_id: int) -> list[ExtractedFigure
 
     session.execute(
         delete(ExtractedFigure).where(
-            ExtractedFigure.document_id == document_id, ExtractedFigure.extraction_method == METHOD
+            ExtractedFigure.document_id == document_id,
+            ExtractedFigure.extraction_method.in_([METHOD, WORDS_METHOD]),
         )
     )
 
@@ -324,52 +564,27 @@ def extract_document(session: Session, document_id: int) -> list[ExtractedFigure
     )
     for page in pages:
         statement = statement_type(page.text)
-        if statement is None:
-            continue
         unit = find_unit(page.text)
-        tables = session.scalars(
-            select(PageTable)
-            .where(PageTable.document_id == document_id, PageTable.page_no == page.page_no)
-            .order_by(PageTable.table_index)
-        )
-        for table in tables:
-            # Header = page text before the table's first data row
-            first_label = next(
-                (
-                    normalise_label(c)
-                    for r in table.rows
-                    for c in r
-                    if c
-                    and parse_number(c) is None
-                    and re.search(r"[a-z]{3}", c.lower())
-                    and any(_is_value_slot(x) for x in r)
-                ),
-                None,
+        if statement is None or unit is None:
+            continue
+        figures = _from_tables(session, page, statement, unit)
+        if not figures and page.words:
+            figures = extract_from_words(page.words, statement, unit, page.page_no)
+        for fig in figures:
+            row = ExtractedFigure(
+                document_id=document_id,
+                page_no=fig.page_no,
+                table_ref=fig.table_ref,
+                metric=fig.metric,
+                period=fig.period.label,
+                basis=basis,
+                value=fig.value,
+                unit=fig.unit,
+                source_text=fig.source_text,
+                extraction_method=fig.method,
+                confidence=Decimal("0.9"),
             )
-            header = page.text
-            if first_label:
-                cut = page.text.lower().find(first_label[:20])
-                header = page.text[:cut] if cut > 0 else page.text
-            periods = find_periods(header, statement)
-            if not periods or unit is None:
-                continue
-            for fig in extract_from_table(
-                table.rows, statement, periods, unit, page.page_no, table.table_index
-            ):
-                row = ExtractedFigure(
-                    document_id=document_id,
-                    page_no=fig.page_no,
-                    table_ref=fig.table_ref,
-                    metric=fig.metric,
-                    period=fig.period.label,
-                    basis=basis,
-                    value=fig.value,
-                    unit=fig.unit,
-                    source_text=fig.source_text,
-                    extraction_method=METHOD,
-                    confidence=Decimal("0.9"),
-                )
-                session.add(row)
-                stored.append(row)
+            session.add(row)
+            stored.append(row)
     session.commit()
     return stored

@@ -25,11 +25,25 @@ class ParsedTable:
     bbox: tuple[float, float, float, float]
 
 
+# A word and its position on the page: [text, x0, x1, top], in PDF points
+Word = list[str | float]
+
+
 @dataclass
 class ParsedPage:
     page_no: int  # 1-based, as printed by PDF viewers
     text: str
     tables: list[ParsedTable] = field(default_factory=list)
+    words: list[Word] = field(default_factory=list)
+
+
+def page_words(page: pdfplumber.page.Page) -> list[Word]:
+    """Positions let later steps rebuild columns of tables drawn without ruling lines."""
+    return [
+        [_clean(w["text"]) or "", round(w["x0"], 1), round(w["x1"], 1), round(w["top"], 1)]
+        for w in page.extract_words()
+        if _clean(w["text"])
+    ]
 
 
 @dataclass
@@ -69,7 +83,9 @@ def parse_pdf(path: Path) -> tuple[int, Iterator[ParsedPage]]:
                     if any(cell for row in rows for cell in row):
                         tables.append(ParsedTable(rows=rows, bbox=table.bbox))
                 text = _clean(page.extract_text()) or ""
-                yield ParsedPage(page_no=index + 1, text=text, tables=tables)
+                yield ParsedPage(
+                    page_no=index + 1, text=text, tables=tables, words=page_words(page)
+                )
                 page.flush_cache()  # keeps memory flat on 500+ page documents
         finally:
             pdf.close()
@@ -93,6 +109,7 @@ def ingest_pdf(
     sha = sha256_file(path)
     existing = session.scalar(select(Document).where(Document.sha256 == sha))
     if existing is not None:
+        backfill_words(session, existing.id, path)
         tables = session.query(PageTable).filter_by(document_id=existing.id).count()
         return IngestResult(existing.id, existing.page_count, tables, already_present=True)
 
@@ -111,7 +128,14 @@ def ingest_pdf(
     stored_pages = 0
     table_count = 0
     for parsed in pages:
-        session.add(Page(document_id=document.id, page_no=parsed.page_no, text=parsed.text))
+        session.add(
+            Page(
+                document_id=document.id,
+                page_no=parsed.page_no,
+                text=parsed.text,
+                words=parsed.words,
+            )
+        )
         for index, table in enumerate(parsed.tables):
             session.add(
                 PageTable(
@@ -136,3 +160,22 @@ def ingest_pdf(
 
     session.commit()
     return IngestResult(document.id, page_count, table_count, already_present=False)
+
+
+def backfill_words(session: Session, document_id: int, path: Path) -> int:
+    """Fill word positions for pages stored before positions were kept. Returns pages filled."""
+    missing = {
+        page.page_no: page
+        for page in session.scalars(
+            select(Page).where(Page.document_id == document_id, Page.words.is_(None))
+        )
+    }
+    if not missing:
+        return 0
+    with pdfplumber.open(path) as pdf:
+        for page_no, page in missing.items():
+            pdf_page = pdf.pages[page_no - 1]
+            page.words = page_words(pdf_page)
+            pdf_page.flush_cache()
+    session.commit()
+    return len(missing)

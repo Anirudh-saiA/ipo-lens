@@ -1,0 +1,20 @@
+metric,period,golden_value,unit,source_page,verified_by,notes
+revenue_from_operations,3M ended 2026-06-30,,INR million,76,NEEDS CHECK,"Summary restated consolidated P&L, Revenue from Operations"
+revenue_from_operations,FY2026,,INR million,76,NEEDS CHECK,
+revenue_from_operations,FY2025,,INR million,76,NEEDS CHECK,
+revenue_from_operations,FY2024,,INR million,76,NEEDS CHECK,
+profit_after_tax,3M ended 2026-06-30,,INR million,76,NEEDS CHECK,"Profit for the period/ year (after share of associates), not the earlier Profit After Tax line"
+profit_after_tax,FY2026,,INR million,76,NEEDS CHECK,
+profit_after_tax,FY2025,,INR million,76,NEEDS CHECK,
+profit_after_tax,FY2024,,INR million,76,NEEDS CHECK,
+net_cash_from_operating_activities,3M ended 2026-06-30,,INR million,77,NEEDS CHECK,"Net Cash Flow from Operating Activities (A)"
+net_cash_from_operating_activities,FY2026,,INR million,77,NEEDS CHECK,
+net_cash_from_operating_activities,FY2025,,INR million,77,NEEDS CHECK,
+net_cash_from_operating_activities,FY2024,,INR million,77,NEEDS CHECK,
+borrowings_non_current,as at 2026-03-31,,INR million,75,NEEDS CHECK,"Non-current Borrowings"
+borrowings_current,as at 2026-03-31,,INR million,75,NEEDS CHECK,"Current Borrowings"
+other_equity,as at 2026-03-31,,INR million,75,NEEDS CHECK,
+eps_basic,FY2026,,INR per share,76,NEEDS CHECK,
+fresh_issue_size,issue,,INR million,1,NEEDS CHECK,"Cover: up to 270,000,000 shares; amount [●]; milestone 3"
+offer_for_sale_size,issue,0,INR million,1,owner-supplied PDF cover page text (2026-11-03),"Cover says Not applicable; milestone 3"
+price_band,issue,,INR,1,,"Not in the RHP (cover shows [●]); milestone 3"

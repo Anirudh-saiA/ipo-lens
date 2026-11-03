@@ -32,7 +32,9 @@ class Check:
 def _ours(session: Session, document_id: int) -> dict[tuple[str, str], tuple[Decimal, str]]:
     found: dict[tuple[str, str], tuple[Decimal, str]] = {}
     for f in session.scalars(
-        select(ExtractedFigure).where(ExtractedFigure.document_id == document_id)
+        select(ExtractedFigure)
+        .where(ExtractedFigure.document_id == document_id)
+        .order_by(ExtractedFigure.page_no, ExtractedFigure.id)  # first printed wins
     ):
         found.setdefault((f.metric, f.period), (f.value, "reported"))
     for m in session.scalars(

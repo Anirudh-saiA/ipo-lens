@@ -5,7 +5,7 @@ looks up the inputs for each period, stores the result with the formula and the 
 figures it used, and skips (never guesses) a metric whose inputs are missing.
 """
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from decimal import Decimal
 
@@ -100,7 +100,7 @@ def compute_period(figures: dict[tuple[str, str], ExtractedFigure], period: str)
         unit: str,
         formula: str,
         fn: Callable[..., Decimal],
-        inputs: list[ExtractedFigure | None],
+        inputs: Sequence[ExtractedFigure | None],
         value_inputs: list[Decimal] | None = None,
         point_in_time: bool = False,
     ) -> Decimal | None:
@@ -134,12 +134,38 @@ def compute_period(figures: dict[tuple[str, str], ExtractedFigure], period: str)
     )
     rev, pat = get("revenue_from_operations"), get("profit_after_tax")
     bs = _balance_date(period)
-    eq_close, eq_open = get("total_equity", bs), get("total_equity", _previous_year_end(period))
     b_nc, b_c = get("borrowings_non_current", bs), get("borrowings_current", bs)
+    # Money results take the unit of their inputs (million, lakh, crore)
+    money = next((f.unit for f in (pbt, rev, pat, fin, b_nc) if f is not None), "INR million")
+
+    def equity(date_label: str | None) -> tuple[Decimal, list[ExtractedFigure]] | None:
+        """Reported total equity, or the sum of its reported parts when no total is printed
+        (consolidated summaries often list share capital, other equity and NCI only)."""
+        reported = get("total_equity", date_label)
+        if reported is not None:
+            return reported.value, [reported]
+        capital, other = get("equity_share_capital", date_label), get("other_equity", date_label)
+        if capital is None or other is None:
+            return None
+        nci = get("non_controlling_interest", date_label)
+        parts = [capital, other] + ([nci] if nci is not None else [])
+        return sum((f.value for f in parts), Decimal(0)), parts
+
+    eq_close, eq_open = equity(bs), equity(_previous_year_end(period))
+    if eq_close is not None and len(eq_close[1]) > 1:
+        add(
+            "total_equity",
+            money,
+            "equity_share_capital + other_equity + non_controlling_interest (no total printed)",
+            lambda v: v,
+            eq_close[1],
+            [eq_close[0]],
+            point_in_time=True,
+        )
 
     e = add(
         "ebitda",
-        "INR million",
+        money,
         "profit_before_tax + finance_costs + depreciation_amortisation",
         ebitda,
         [pbt, fin, dep],
@@ -147,7 +173,7 @@ def compute_period(figures: dict[tuple[str, str], ExtractedFigure], period: str)
     if e is not None and oth is not None:
         add(
             "adjusted_ebitda",
-            "INR million",
+            money,
             "ebitda - other_income",
             adjusted_ebitda,
             [pbt, fin, dep, oth],
@@ -178,36 +204,40 @@ def compute_period(figures: dict[tuple[str, str], ExtractedFigure], period: str)
         margin_pct,
         [pat, rev],
     )
-    add(
-        "return_on_net_worth_pct",
-        "%",
-        "profit_after_tax / closing total_equity * 100",
-        return_on_net_worth_pct,
-        [pat, eq_close],
-    )
-    add(
-        "return_on_equity_pct",
-        "%",
-        "profit_after_tax / average(opening, closing total_equity) * 100",
-        return_on_average_equity_pct,
-        [pat, eq_open, eq_close],
-    )
+    if pat is not None and eq_close is not None:
+        add(
+            "return_on_net_worth_pct",
+            "%",
+            "profit_after_tax / closing total_equity * 100",
+            return_on_net_worth_pct,
+            [pat, *eq_close[1]],
+            [pat.value, eq_close[0]],
+        )
+        if eq_open is not None:
+            add(
+                "return_on_equity_pct",
+                "%",
+                "profit_after_tax / average(opening, closing total_equity) * 100",
+                return_on_average_equity_pct,
+                [pat, *eq_open[1], *eq_close[1]],
+                [pat.value, eq_open[0], eq_close[0]],
+            )
     d = add(
         "total_debt",
-        "INR million",
+        money,
         "borrowings_non_current + borrowings_current",
         total_debt,
         [b_nc, b_c],
         point_in_time=True,
     )
-    if d is not None:
+    if d is not None and eq_close is not None:
         add(
             "debt_to_equity",
             "x",
             "total_debt / total_equity",
             debt_to_equity,
-            [b_nc, b_c, eq_close],
-            [d, eq_close.value] if eq_close else None,
+            [b_nc, b_c, *eq_close[1]],
+            [d, eq_close[0]],
             point_in_time=True,
         )
     return results
@@ -216,7 +246,9 @@ def compute_period(figures: dict[tuple[str, str], ExtractedFigure], period: str)
 def compute_document(session: Session, document_id: int) -> list[CalculatedMetric]:
     """Recompute every metric for a document from its stored figures."""
     rows = session.scalars(
-        select(ExtractedFigure).where(ExtractedFigure.document_id == document_id)
+        select(ExtractedFigure)
+        .where(ExtractedFigure.document_id == document_id)
+        .order_by(ExtractedFigure.page_no, ExtractedFigure.id)  # first printed wins
     )
     figures: dict[tuple[str, str], ExtractedFigure] = {}
     for row in rows:
