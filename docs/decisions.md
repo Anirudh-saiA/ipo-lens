@@ -164,3 +164,8 @@ Same 32 questions, phi3.5 on CPU for text questions only (average 8 s per questi
 
 ### Breakdown questions refused with page pointers (2026-11-04, owner's choice)
 Questions asking for a percentage, region or segment split are no longer sent to the model. IPO Lens refuses and lists the 3 most relevant pages (reason "breakdown question"), so the reader can check the table. This removes the one wrong answer found in evaluation (North America share given for the quarter instead of the year). The evaluation question for it now counts as a refusal, so the strict score stays at 17/22 at best; the gate is not met as measured.
+
+## Home page as three comparison tables (2026-11-04, owner's request)
+- Home now shows Ongoing, Upcoming and Closed sections (always visible), each a table: bidding dates, price band, revenue, revenue growth, EBITDA, profit, debt/equity for the latest fiscal year, each with its page. Growth is a new Python metric (`revenue_growth_pct`, refused when the previous year is missing or not positive).
+- **Not built, on purpose:** "prove which is better to invest in". That is investment advice (brief rule 10, SEBI adviser rules) and a prospectus cannot prove it. The site compares facts side by side, sorts by bid date, and never ranks or scores. The footer says so.
+- Companies report in different units (₹ million or ₹ lakh), so the table shows each company's unit under its name and advises comparing growth, margins and debt rather than raw amounts. Converting units in Python is a possible next step.

@@ -148,7 +148,7 @@ export function IpoTable({ ipos }: { ipos: Ipo[] }) {
         <tbody className="divide-y divide-hairline">
           {ipos.map((ipo) => (
             <tr key={ipo.primary_document_id} className="hover:bg-accent-soft/40">
-              <td className="px-3 py-3 font-serif text-base">
+              <td className="min-w-[13rem] px-3 py-3 font-serif text-base">
                 <Link
                   href={`/ipo/${ipo.primary_document_id}`}
                   className="text-ink hover:text-accent"
@@ -164,10 +164,10 @@ export function IpoTable({ ipos }: { ipos: Ipo[] }) {
                 {priceBandText(ipo.price_band, ipo.status)}
               </td>
               <Cell c={ipo.headline.revenue_from_operations} />
-              <Cell c={ipo.headline.revenue_growth_pct} suffix="%" loss />
+              <Cell c={ipo.headline.revenue_growth_pct} loss />
               <Cell c={ipo.headline.ebitda} loss />
               <Cell c={ipo.headline.profit_after_tax} loss />
-              <Cell c={ipo.headline.debt_to_equity} suffix="x" />
+              <Cell c={ipo.headline.debt_to_equity} />
             </tr>
           ))}
         </tbody>
