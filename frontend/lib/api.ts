@@ -79,7 +79,7 @@ export interface Ipo {
   bid_open: Cited | null;
   bid_close: Cited | null;
   price_band: Cited | null;
-  headline: Partial<Record<"revenue_from_operations" | "ebitda" | "profit_after_tax", Cited>>;
+  headline: Partial<Record<string, Cited>>;
   as_of: string;
 }
 

@@ -109,3 +109,69 @@ export function IpoCard({ ipo }: { ipo: Ipo }) {
     </Link>
   );
 }
+
+function num(c: Cited | undefined, suffix = ""): string {
+  if (!c) return "–";
+  return `${formatNumber(c.value, c.unit ?? "")}${suffix}`;
+}
+
+function Cell({ c, suffix = "", loss = false }: { c?: Cited; suffix?: string; loss?: boolean }) {
+  const negative = loss && c?.value.startsWith("-");
+  return (
+    <td
+      className={`figure whitespace-nowrap px-3 py-3 text-right ${negative ? "text-[#9b2c2c]" : ""}`}
+    >
+      {num(c, suffix)}
+      {c && <Citation documentId={c.document_id} page={c.page_no} />}
+    </td>
+  );
+}
+
+/** One row per IPO: the same facts side by side. Sorted by bid date, never ranked. */
+export function IpoTable({ ipos }: { ipos: Ipo[] }) {
+  const unit = ipos[0]?.headline.revenue_from_operations?.unit;
+  return (
+    <div className="overflow-x-auto rounded-xl border border-hairline bg-card">
+      <table className="w-full min-w-[820px] text-sm">
+        <thead className="text-xs uppercase tracking-wider text-muted">
+          <tr className="border-b border-hairline">
+            <th className="px-3 py-3 text-left font-medium">Company</th>
+            <th className="px-3 py-3 text-left font-medium">Bidding</th>
+            <th className="px-3 py-3 text-right font-medium">Price band</th>
+            <th className="px-3 py-3 text-right font-medium">Revenue</th>
+            <th className="px-3 py-3 text-right font-medium">Growth</th>
+            <th className="px-3 py-3 text-right font-medium">EBITDA</th>
+            <th className="px-3 py-3 text-right font-medium">Profit</th>
+            <th className="px-3 py-3 text-right font-medium">Debt / equity</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-hairline">
+          {ipos.map((ipo) => (
+            <tr key={ipo.primary_document_id} className="hover:bg-accent-soft/40">
+              <td className="px-3 py-3 font-serif text-base">
+                <Link
+                  href={`/ipo/${ipo.primary_document_id}`}
+                  className="text-ink hover:text-accent"
+                >
+                  {ipo.company}
+                </Link>
+                <div className="font-sans text-xs text-muted">
+                  {ipo.headline.revenue_from_operations?.unit?.replace("INR ", "₹ ") ?? unit}
+                </div>
+              </td>
+              <td className="whitespace-nowrap px-3 py-3 text-muted">{bidWindow(ipo) ?? "–"}</td>
+              <td className="whitespace-nowrap px-3 py-3 text-right text-muted">
+                {priceBandText(ipo.price_band, ipo.status)}
+              </td>
+              <Cell c={ipo.headline.revenue_from_operations} />
+              <Cell c={ipo.headline.revenue_growth_pct} suffix="%" loss />
+              <Cell c={ipo.headline.ebitda} loss />
+              <Cell c={ipo.headline.profit_after_tax} loss />
+              <Cell c={ipo.headline.debt_to_equity} suffix="x" />
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}

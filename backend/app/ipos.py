@@ -93,30 +93,37 @@ def _headline(session: Session, document_id: int) -> dict[str, Cited]:
                 "verified fact (from the document)",
                 latest,
             )
-    ebitda = session.scalar(
-        select(CalculatedMetric).where(
-            CalculatedMetric.document_id == document_id,
-            CalculatedMetric.metric == "ebitda",
-            CalculatedMetric.period == latest,
+
+    def metric(name: str, period: str) -> None:
+        m = session.scalar(
+            select(CalculatedMetric).where(
+                CalculatedMetric.document_id == document_id,
+                CalculatedMetric.metric == name,
+                CalculatedMetric.period == period,
+            )
         )
-    )
-    if ebitda is not None:
+        if m is None:
+            return
         pages = sorted(
             {
                 f.page_no
                 for f in session.scalars(
-                    select(ExtractedFigure).where(ExtractedFigure.id.in_(ebitda.input_figure_ids))
+                    select(ExtractedFigure).where(ExtractedFigure.id.in_(m.input_figure_ids))
                 )
             }
         )
-        out["ebitda"] = Cited(
-            str(ebitda.value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)),
-            ebitda.unit,
+        out[name] = Cited(
+            str(m.value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)),
+            m.unit,
             document_id,
             pages[0] if pages else 0,
             "calculated metric",
-            latest,
+            period,
         )
+
+    for name in ("ebitda", "ebitda_margin_pct", "revenue_growth_pct", "pat_margin_pct"):
+        metric(name, latest)
+    metric("debt_to_equity", f"as at {latest[2:]}-03-31")
     return out
 
 

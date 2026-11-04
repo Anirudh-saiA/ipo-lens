@@ -185,3 +185,22 @@ def test_ebitda_starts_before_exceptional_items_when_printed() -> None:
     (result,) = calc.compute_period(figures, "FY2025")
     assert (result.metric, result.value) == ("ebitda", D("-341.8200"))
     assert result.formula.startswith("profit_before_exceptional_items_and_tax")
+
+
+def test_revenue_growth() -> None:
+    # BCSSL: FY2026 12,668.18 vs FY2025 10,557.07
+    assert calc.growth_pct(D("12668.18"), D("10557.07")).quantize(D("0.01")) == D("20.00")
+    assert calc.growth_pct(D("90"), D("100")) == D("-10")
+    with pytest.raises(ZeroDivisionError):
+        calc.growth_pct(D("5"), D("0"))
+
+
+def test_growth_needs_the_previous_year() -> None:
+    figures = _figures(_fig(1, "revenue_from_operations", "FY2026", "100"))
+    assert "revenue_growth_pct" not in {r.metric for r in calc.compute_period(figures, "FY2026")}
+    figures = _figures(
+        _fig(1, "revenue_from_operations", "FY2026", "120"),
+        _fig(2, "revenue_from_operations", "FY2025", "100"),
+    )
+    got = {r.metric: r for r in calc.compute_period(figures, "FY2026")}
+    assert got["revenue_growth_pct"].value == D("20.0000")

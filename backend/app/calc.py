@@ -38,6 +38,13 @@ def margin_pct(numerator: Decimal, revenue: Decimal) -> Decimal:
     return numerator / revenue * HUNDRED
 
 
+def growth_pct(current: Decimal, previous: Decimal) -> Decimal:
+    """Change from the previous period, in percent. Refused when the base is not positive."""
+    if previous <= 0:
+        raise ZeroDivisionError("previous value is not positive")
+    return (current - previous) / previous * HUNDRED
+
+
 def debt_including_deferred_payments(
     debt: Decimal, deferred_non_current: Decimal, deferred_current: Decimal
 ) -> Decimal:
@@ -211,6 +218,15 @@ def compute_period(figures: dict[tuple[str, str], ExtractedFigure], period: str)
             margin_pct,
             [pbt, fin, dep, rev],
             [e, rev.value] if rev else None,
+        )
+    if period.startswith("FY"):
+        previous_revenue = get("revenue_from_operations", f"FY{int(period[2:]) - 1}")
+        add(
+            "revenue_growth_pct",
+            "%",
+            "(revenue_from_operations - previous year's) / previous year's * 100",
+            growth_pct,
+            [rev, previous_revenue],
         )
     add(
         "pat_margin_pct",
