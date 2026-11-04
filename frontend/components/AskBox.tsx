@@ -4,12 +4,14 @@ import { useState } from "react";
 
 import { Citation } from "@/components/Citation";
 import { OutputLabel } from "@/components/OutputLabel";
+import type { OutputLabel as OutputLabelName } from "@/lib/api";
 
 interface AnswerResponse {
   answer: string;
   pages: number[];
   abstained: boolean;
   model: string | null;
+  output_label?: OutputLabelName;
   detail?: string;
 }
 
@@ -65,9 +67,9 @@ export function AskBox({ documentId }: { documentId: number }) {
         </button>
       </form>
       <p className="mt-2 text-xs text-muted">
-        Answers come only from this prospectus and cite their pages; numbers are checked against
-        those pages. A small local model is used, so it can take up to a minute and may say there is
-        not enough evidence. No advice or predictions.
+        Figures and dates are read straight from the verified data, with their page. Other questions
+        are answered by a small local AI model from retrieved pages only, so they can take up to a
+        minute and may say there is not enough evidence. No advice or predictions.
       </p>
       {error && (
         <p role="alert" className="mt-3 text-sm text-[#9b2c2c]">
@@ -83,8 +85,14 @@ export function AskBox({ documentId }: { documentId: number }) {
             ))}
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted">
-            {!result.abstained && <OutputLabel label="AI interpretation" />}
-            {result.model && <span>Model: {result.model} (local)</span>}
+            {!result.abstained && result.output_label && (
+              <OutputLabel label={result.output_label} />
+            )}
+            {result.model ? (
+              <span>Model: {result.model} (local)</span>
+            ) : (
+              <span>From verified data</span>
+            )}
           </div>
         </div>
       )}

@@ -20,6 +20,24 @@ from app.models import CalculatedMetric, Document, ExtractedFigure, IssueFact
 # source: "figure" (reported), "metric" (calculated in Python), "fact" (issue structure)
 INTENTS: list[tuple[str, str, str, re.Pattern[str]]] = [
     (
+        "use_of_proceeds",
+        "proceeds",
+        "Use of proceeds",
+        re.compile(r"proceeds|repay|prepay|objects? of the (issue|offer)", re.I),
+    ),
+    (
+        "offer_for_sale_shares",
+        "fact",
+        "Offer for sale, number of shares",
+        re.compile(r"(how many|number of) .*shares.*(offer for sale|ofs)", re.I),
+    ),
+    (
+        "fresh_issue_shares",
+        "fact",
+        "Fresh issue, number of shares",
+        re.compile(r"(how many|number of) .*shares", re.I),
+    ),
+    (
         "profit_before_tax",
         "figure",
         "Profit before tax",
@@ -158,9 +176,18 @@ class FactAnswer:
     found: bool
 
 
+# A question that asks for a breakdown, a percentage or a region is not a lookup of one
+# printed figure; it goes to the text model, which cites the table it reads from.
+_NOT_A_LOOKUP = re.compile(
+    r"percent|%|came from|by region|by segment|north america|region|segment", re.I
+)
+
+
 def detect_intent(question: str) -> tuple[str, str, str] | None:
     """(key, source, name) for a question about a figure or date, else None."""
     for key, source, name, pattern in INTENTS:
+        if source != "proceeds" and _NOT_A_LOOKUP.search(question):
+            continue
         if pattern.search(question):
             return key, source, name
     return None
@@ -222,6 +249,8 @@ def answer_from_data(session: Session, document_id: int, question: str) -> FactA
     key, source, name = intent
     flow, as_at = detect_period(question)
 
+    if source == "proceeds":
+        return _proceeds(session, document_id, question)
     if source == "fact":
         return _issue_fact(session, document_id, key, name)
 
@@ -332,6 +361,40 @@ def _issue_fact(session: Session, document_id: int, field: str, name: str) -> Fa
     return FactAnswer(
         f"{name}: {value} (as printed in the prospectus).",
         [f.page_no],
+        "verified fact (from the document)",
+        True,
+    )
+
+
+def _proceeds(session: Session, document_id: int, question: str) -> FactAnswer:
+    """Objects of the issue and their amounts. A question naming repayment or prepayment
+    gets only the matching object; otherwise all objects are listed."""
+    rows = session.scalars(
+        select(IssueFact)
+        .where(IssueFact.document_id == document_id, IssueFact.field == "use_of_proceeds")
+        .order_by(IssueFact.id)
+    ).all()
+    if not rows:
+        return FactAnswer(
+            "The objects of the issue were not found in this prospectus.", [], "", False
+        )
+    narrowed = (
+        [r for r in rows if re.search(r"repay|prepay", r.label or "", re.I)]
+        if re.search(r"repay|prepay", question, re.I)
+        else rows
+    )
+    chosen = narrowed or rows
+    parts = []
+    for r in chosen:
+        amount = (
+            f"₹{r.value_text} {(r.unit or '')[4:]}".strip()
+            if "[●]" not in r.value_text
+            else "an amount not yet disclosed ([●])"
+        )
+        parts.append(f"{r.label}: {amount}")
+    return FactAnswer(
+        "Use of net proceeds (as printed): " + "; ".join(parts) + ".",
+        sorted({r.page_no for r in chosen}),
         "verified fact (from the document)",
         True,
     )

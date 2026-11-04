@@ -176,6 +176,7 @@ def ask(
         abstained=a.abstained,
         reason=a.reason,
         model=a.model,
+        output_label=a.output_label,
     )
 
 

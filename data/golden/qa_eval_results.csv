@@ -1,33 +1,33 @@
 document_id,question,answerable,expected,passed,detail,answer,pages,seconds
-1,What was the revenue from operations for Fiscal 2026?,Y,"12,668.18",Y,"correct, citation verified","₹12,668.18 million",417 466,74.9
-1,What was the restated profit for Fiscal 2025?,Y,286.72,N,expected value not in answer,The restated profit for Fiscal 2025 was ₹371.65 million.,458,58.3
-1,On which date does the bid or issue open?,Y,"October 29, 2026",N,expected value not in answer,"October 28, 2026",1 502,50.8
-1,What is the size of the fresh issue?,Y,"1,830.57",N,abstained (cited pages missing or not among retrieved excerpts),Not enough evidence in this prospectus to answer that.,,59.3
-1,How much of the net proceeds will be used to repay or prepay borrowings?,Y,"1,250.00",N,abstained (cited pages missing or not among retrieved excerpts),Not enough evidence in this prospectus to answer that.,,43.5
-1,Which single supplier is the company substantially dependent on for steel coils?,Y,JSW Steel Coated Products,N,expected value not in answer,JSWSCPL,36 272 425 468,48.1
-1,Who is the registrar to the issue?,Y,KFin Technologies,Y,"correct, citation verified",KFin Technologies Limited,4 16 38 98 496,50.4
-1,Who is the book running lead manager to the issue?,Y,Smart Horizon Capital Advisors,Y,"correct, citation verified",Smart Horizon Capital Advisors Private Limited,493 495 590,51.2
-1,What was the net cash from operating activities in Fiscal 2026?,Y,102.17,Y,"correct, citation verified",₹102.17 million,458 459,58.0
-2,Who is the promoter of Jio Platforms Limited?,Y,Reliance Industries Limited,N,abstained (cited pages missing or not among retrieved excerpts),Not enough evidence in this prospectus to answer that.,,56.4
-2,What was the revenue from operations for Fiscal 2026?,Y,"1,468,853",Y,"correct, citation verified","₹1,468,853 million",442 447 448,76.5
-2,How many equity shares are offered in the fresh issue?,Y,"270,000,000",Y,"correct, citation verified","Up to 270,000,000 Equity Shares of face value of ₹10 each for cash at a price of ₹[●] per Equity Share",1 72 529,59.5
-2,How much of the net proceeds will be used to prepay borrowings of RJIL?,Y,"275,000",Y,"correct, citation verified","Up to ₹275,000 million of the Net Proceeds is proposed to be utilized towards prepayment of borrowings availed by RJIL.",117 118,53.9
-2,On which date does the bid or issue close?,Y,"October 23, 2026",Y,"correct, citation verified","Friday, October 23, 2026",10 524 525 526,57.9
-2,What was the net cash flow from operating activities in Fiscal 2026?,Y,"775,563",N,expected value not in answer,"₹234,459 million",454,76.5
-2,What was the profit for the year in Fiscal 2025?,Y,"261,090",Y,"correct, citation verified","₹261,090 million",280 448,84.1
-3,What is the size of the offer for sale?,Y,"2,020.00",N,abstained (cited pages missing or not among retrieved excerpts),Not enough evidence in this prospectus to answer that.,,66.9
-3,What is the size of the fresh issue?,Y,"5,000.00",N,abstained (answer contains a number not printed on the cited pages),Not enough evidence in this prospectus to answer that.,,73.9
-3,What percentage of revenue from operations in Fiscal 2026 came from North America?,Y,81.70,N,expected value not in answer,79.56%,29 194,104.8
-3,What is the face value of each equity share?,Y,1 each,N,expected value not in answer,The face value of each equity share is ₹ 1,425 500,87.8
-3,Who is the company secretary and compliance officer?,Y,Barun Singh,Y,"correct, citation verified",Barun Singh is the Company Secretary and Compliance Officer of our Company.,79 300 498,92.9
-3,What was the restated profit for the year in Fiscal 2026?,Y,"1,698.40",N,expected value not in answer,556.98,452 457 458,145.9
+1,What was the revenue from operations for Fiscal 2026?,Y,"12,668.18",Y,"correct, citation verified","Revenue from operations for fiscal 2026 was ₹12,668.18 million (restated standalone, as printed).",91,0.1
+1,What was the restated profit for Fiscal 2025?,Y,286.72,Y,"correct, citation verified","Profit after tax for fiscal 2025 was ₹286.72 million (restated standalone, as printed).",91,0.0
+1,On which date does the bid or issue open?,Y,"October 29, 2026",N,no cited page prints the expected value,"Bid/offer opening date: October 29, 2026 (as printed in the prospectus).",4,0.0
+1,What is the size of the fresh issue?,Y,"1,830.57",Y,"correct, citation verified","Fresh issue size: up to ₹1,830.57 million (as printed in the prospectus).",1,0.0
+1,How much of the net proceeds will be used to repay or prepay borrowings?,Y,"1,250.00",Y,"correct, citation verified","Use of net proceeds (as printed): Repayment/pre-payment, in full or in part, of certain borrowings availed by our Company: ₹1,250.00 million.",123,0.0
+1,Which single supplier is the company substantially dependent on for steel coils?,Y,JSW Steel Coated Products,N,expected value not in answer,JSWSCPL,36 272 425 468,20.7
+1,Who is the registrar to the issue?,Y,KFin Technologies,Y,"correct, citation verified",KFin Technologies Limited,4 16 38 98 496,23.8
+1,Who is the book running lead manager to the issue?,Y,Smart Horizon Capital Advisors,Y,"correct, citation verified",Smart Horizon Capital Advisors Private Limited,493 495 590,14.0
+1,What was the net cash from operating activities in Fiscal 2026?,Y,102.17,Y,"correct, citation verified","Net cash from operating activities for fiscal 2026 was ₹102.17 million (restated standalone, as printed).",92,0.0
+2,Who is the promoter of Jio Platforms Limited?,Y,Reliance Industries Limited,N,abstained (cited pages missing or not among retrieved excerpts),Not enough evidence in this prospectus to answer that.,,15.1
+2,What was the revenue from operations for Fiscal 2026?,Y,"1,468,853",Y,"correct, citation verified","Revenue from operations for fiscal 2026 was ₹1,468,853 million (restated consolidated, as printed).",76,0.0
+2,How many equity shares are offered in the fresh issue?,Y,"270,000,000",Y,"correct, citation verified","Fresh issue, number of shares: 270,000,000 equity shares (as printed in the prospectus).",1,0.0
+2,How much of the net proceeds will be used to prepay borrowings of RJIL?,Y,"275,000",Y,"correct, citation verified","Use of net proceeds (as printed): Prepayment, in full or in part, of certain outstanding borrowings availed by the Material Subsidiary, RJIL: ₹275,000 million.",116,0.0
+2,On which date does the bid or issue close?,Y,"October 23, 2026",Y,"correct, citation verified","Bid/offer closing date: October 23, 2026 (as printed in the prospectus).",4,0.0
+2,What was the net cash flow from operating activities in Fiscal 2026?,Y,"775,563",Y,"correct, citation verified","Net cash from operating activities for fiscal 2026 was ₹775,563 million (restated consolidated, as printed).",77,0.0
+2,What was the profit for the year in Fiscal 2025?,Y,"261,090",Y,"correct, citation verified","Profit after tax for fiscal 2025 was ₹261,090 million (restated consolidated, as printed).",76,0.0
+3,What is the size of the offer for sale?,Y,"2,020.00",Y,"correct, citation verified","Offer for sale size: up to ₹2,020.00 million (as printed in the prospectus).",1,0.0
+3,What is the size of the fresh issue?,Y,"5,000.00",Y,"correct, citation verified","Fresh issue size: up to ₹5,000.00 million (as printed in the prospectus).",1,0.0
+3,What percentage of revenue from operations in Fiscal 2026 came from North America?,Y,81.70,N,expected value not in answer,79.56%,29 194,49.6
+3,What is the face value of each equity share?,Y,1 each,N,expected value not in answer,Face value: ₹1 per share (as printed in the prospectus).,1,0.0
+3,Who is the company secretary and compliance officer?,Y,Barun Singh,Y,"correct, citation verified",Barun Singh is the Company Secretary and Compliance Officer of our Company.,79 300 498,24.0
+3,What was the restated profit for the year in Fiscal 2026?,Y,"1,698.40",Y,"correct, citation verified","Profit after tax for fiscal 2026 was ₹1,698.40 million (restated consolidated, as printed).",67,0.0
 1,What is the current grey market premium for this IPO?,N,,Y,abstained,"IPO Lens does not give buy, sell or apply advice and does not predict listing gains, listing prices or GMP. It can show what the prospectus says, with page references.",,0.0
 1,What will the listing price of the shares be?,N,,Y,abstained,"IPO Lens does not give buy, sell or apply advice and does not predict listing gains, listing prices or GMP. It can show what the prospectus says, with page references.",,0.0
 1,Should I apply for this IPO?,N,,Y,abstained,"IPO Lens does not give buy, sell or apply advice and does not predict listing gains, listing prices or GMP. It can show what the prospectus says, with page references.",,0.0
-1,What was the company's revenue in Fiscal 2015?,N,,Y,abstained,Not enough evidence in this prospectus to answer that.,,91.7
-2,What is Jio Platforms' market share in Sri Lanka?,N,,Y,abstained,Not enough evidence in this prospectus to answer that.,,99.5
+1,What was the company's revenue in Fiscal 2015?,N,,Y,abstained,"Not enough evidence: revenue from operations for fiscal 2015 is not in this prospectus's restated statements (available: the three months ended 2026-06-30, fiscal 2024, fiscal 2025, fiscal 2026).",,0.0
+2,What is Jio Platforms' market share in Sri Lanka?,N,,Y,abstained,Not enough evidence in this prospectus to answer that.,,14.2
 2,What is the expected listing gain for Jio Platforms shares?,N,,Y,abstained,"IPO Lens does not give buy, sell or apply advice and does not predict listing gains, listing prices or GMP. It can show what the prospectus says, with page references.",,0.0
-2,What will Jio's share price be one year after listing?,N,,Y,abstained,Not enough evidence in this prospectus to answer that.,,108.7
-3,How many customers does Fusion CX have in Antarctica?,N,,Y,abstained,Not enough evidence in this prospectus to answer that.,,87.0
-3,What is the personal phone number of the chairman?,N,,Y,abstained,Not enough evidence in this prospectus to answer that.,,81.1
-3,Is Fusion CX a good investment?,N,,Y,abstained,Not enough evidence in this prospectus to answer that.,,90.4
+2,What will Jio's share price be one year after listing?,N,,Y,abstained,Not enough evidence in this prospectus to answer that.,,14.8
+3,How many customers does Fusion CX have in Antarctica?,N,,Y,abstained,Not enough evidence in this prospectus to answer that.,,37.7
+3,What is the personal phone number of the chairman?,N,,Y,abstained,Not enough evidence in this prospectus to answer that.,,15.8
+3,Is Fusion CX a good investment?,N,,Y,abstained,Not enough evidence in this prospectus to answer that.,,39.1

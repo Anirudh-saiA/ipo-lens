@@ -151,3 +151,13 @@ Conclusion: a small local model must not answer questions about figures. Propose
 
 ### Verified-data answers (2026-11-04, work in progress)
 Figure and date questions are now answered from `app/facts_qa.py` (extracted figures, Python metrics, issue facts) with their pages; only other questions reach the model. Working example: Acevector FY2026 profit -> "a loss of ₹455.06 million", p.77. NOT finished: 2 older tests in tests/test_qa.py now fail because their revenue questions route to data (need updating), one mypy error in facts_qa.py, no new routing tests, evaluation not rerun, 3 new prospectuses still being indexed for the text model.
+
+### Milestone 4 gate result after verified-data routing (2026-11-04)
+
+Same 32 questions, phi3.5 on CPU for text questions only (average 8 s per question, was over 60 s):
+- Unanswerable refused: **10/10**.
+- Answerable, correct with a verified citation, by the strict scorer: **17/22** (was 11/22). Gate target was 20.
+- The 5 misses: (1) bid-open date: the answer is right (October 29, 2026) but the scorer's text match fails because the PDF text splits the date across columns; (2) "JSWSCPL": the RHP's own abbreviation for the supplier, scored as a miss; (3) face value "₹1 per share" vs expected "1 each": right answer, strict match; (4) Jio promoter: refused (retrieval did not find the page); (5) **North America share of revenue: wrong.** The model gave 79.56%, which is the June 2026 quarter; the fiscal 2026 figure is 81.70% on the same page. The number guard cannot catch this because the number is printed on the cited page.
+- By hand, 3 of the 5 are correct answers, but the expected values were not edited to make the gate pass. Gate not passed as measured.
+- Open risk: breakdown/percentage questions (by region, by segment) still go to the small model and can pick the wrong period. Options: refuse them with a pointer to the page; use a larger model; or add a table reader.
+- Routing slips found and fixed by this run: "repay borrowings" answered with total debt; "how many shares" answered with the issue amount; a "percentage from region" question answered with total revenue. Each now has a test.
