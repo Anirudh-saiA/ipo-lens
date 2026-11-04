@@ -178,3 +178,20 @@ def test_ask_endpoint_returns_label_and_pages(db_session: Session, indexed: int)
         assert client.post(f"/documents/{indexed}/ask", json={"question": ""}).status_code == 422
     finally:
         app.dependency_overrides.clear()
+
+
+@pytest.mark.db
+def test_breakdown_questions_are_refused_with_page_pointers(
+    db_session: Session, indexed: int
+) -> None:
+    model = ScriptedModel({"answer": "79.56%", "pages": [91]})
+    a = answer_question(
+        db_session,
+        indexed,
+        "What percentage of revenue from operations came from North America?",
+        FakeEmbedder(),
+        model,
+    )
+    assert a.abstained and a.reason == "breakdown question"
+    assert a.pages and "p." in a.answer
+    assert model.calls == 0  # the model never sees it

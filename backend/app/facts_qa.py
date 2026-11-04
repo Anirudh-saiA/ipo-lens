@@ -183,6 +183,13 @@ _NOT_A_LOOKUP = re.compile(
 )
 
 
+def is_breakdown_question(question: str) -> bool:
+    """Asks for a percentage, region or segment split rather than one printed figure."""
+    return bool(_NOT_A_LOOKUP.search(question)) and not re.search(
+        r"proceeds|repay|prepay", question, re.I
+    )
+
+
 def detect_intent(question: str) -> tuple[str, str, str] | None:
     """(key, source, name) for a question about a figure or date, else None."""
     for key, source, name, pattern in INTENTS:

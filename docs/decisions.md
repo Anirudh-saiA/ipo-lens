@@ -161,3 +161,6 @@ Same 32 questions, phi3.5 on CPU for text questions only (average 8 s per questi
 - By hand, 3 of the 5 are correct answers, but the expected values were not edited to make the gate pass. Gate not passed as measured.
 - Open risk: breakdown/percentage questions (by region, by segment) still go to the small model and can pick the wrong period. Options: refuse them with a pointer to the page; use a larger model; or add a table reader.
 - Routing slips found and fixed by this run: "repay borrowings" answered with total debt; "how many shares" answered with the issue amount; a "percentage from region" question answered with total revenue. Each now has a test.
+
+### Breakdown questions refused with page pointers (2026-11-04, owner's choice)
+Questions asking for a percentage, region or segment split are no longer sent to the model. IPO Lens refuses and lists the 3 most relevant pages (reason "breakdown question"), so the reader can check the table. This removes the one wrong answer found in evaluation (North America share given for the quarter instead of the year). The evaluation question for it now counts as a refusal, so the strict score stays at 17/22 at best; the gate is not met as measured.

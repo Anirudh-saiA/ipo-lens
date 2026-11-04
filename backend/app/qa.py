@@ -16,11 +16,15 @@ from dataclasses import dataclass, field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.facts_qa import answer_from_data
+from app.facts_qa import answer_from_data, is_breakdown_question
 from app.models import Chunk
 from app.models_ai import AnswerModel, Embedder
 
 NOT_ENOUGH = "Not enough evidence in this prospectus to answer that."
+BREAKDOWN_REFUSAL = (
+    "IPO Lens does not answer percentage, regional or segment breakdown questions yet: a "
+    "small model mixed up periods in testing. The figures may be on these pages: "
+)
 ADVICE_REFUSAL = (
     "IPO Lens does not give buy, sell or apply advice and does not predict listing gains, "
     "listing prices or GMP. It can show what the prospectus says, with page references."
@@ -158,6 +162,15 @@ def answer_question(
         )
 
     excerpts = retrieve(session, document_id, question, embedder, k)
+    if is_breakdown_question(question):
+        # Refuse, but point to the most relevant pages so the reader can check the table
+        pointer = list(dict.fromkeys(e.page_no for e in excerpts))[:3]
+        text = (
+            BREAKDOWN_REFUSAL
+            + (", ".join(f"p.{p}" for p in pointer) if pointer else "none found")
+            + "."
+        )
+        return Answer(question, text, sorted(pointer), True, "breakdown question", excerpts)
     if not excerpts:
         return Answer(question, NOT_ENOUGH, [], True, "nothing retrieved")
 
